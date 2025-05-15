@@ -9,115 +9,209 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import javafx.scene.control.Label;
 
-import java.util.*;
+import java.util.Random;
 
 /**
  * Block Blast benzeri bir oyun.
- * Bu kodda hem oyun mantığı hem de arayüz JavaFX ile sağlanır.
- * Grup arkadaşlarınızın anlaması için bol açıklama eklendi!
+ * Renk paleti ve arka plan orijinal oyuna yakın olacak şekilde ayarlanmıştır.
  */
 public class Main extends Application {
 
-    // Oyun alanı kaça kaç karelik bir gridden oluşacak?
+    // Oyun alanı (kaç satır ve sütun olacak)
     private static final int GRID_SIZE = 10;
 
-    // Her bir karenin (hücrenin) piksel cinsinden kenar uzunluğu
+    // Her bir hücrenin boyutu (piksel cinsinden)
     private static final int CELL_SIZE = 60;
 
-    // Tahtanın ekranın sol üstüne göre ne kadar kaydırılacağı (ofset)
-    private static final Point2D GRID_OFFSET = new Point2D(10, 10);
+    // Gridin ekranda kaç piksel sağdan ve yukarıdan boşluk bırakacağı
+    private static final Point2D GRID_OFFSET = new Point2D(10, 60);
 
     /**
-     * Oyun için kullanılabilecek tüm şekiller burada tutulur.
-     * Her şekil birden fazla bloktan oluşur, her bloğun x ve y (koordinat) değeri vardır.
-     * Dilediğiniz şekli buraya Point2D[] olarak ekleyebilirsiniz.
-     * - Her şekil, bir merkezi referans alıp diğer bloklarını ona göre belirtir.
-     * - 3x3 tam dolu kare gibi çok bloklu şekiller de eklenebilir.
+     * Blok şekilleri (bazı blokların 2 kere yazılması çıkma şansını arttırmak için
      */
-    private static final List<Point2D[]> TETROMINOS = Arrays.asList(
-        new Point2D[]{ new Point2D(0,0), new Point2D(1,0), new Point2D(-1,0), new Point2D(0,1) }, // T şekli
-        new Point2D[]{ new Point2D(0,0), new Point2D(1,0), new Point2D(-1,0), new Point2D(-2,0) }, // I şekli (düz çubuk)
-        new Point2D[]{ new Point2D(0,0), new Point2D(0,1), new Point2D(1,1), new Point2D(1,0) },   // O şekli (2x2 kare)
-        new Point2D[]{ new Point2D(0,0), new Point2D(1,0), new Point2D(0,1), new Point2D(0,2) },   // L şekli
-        new Point2D[]{ new Point2D(0,0), new Point2D(-1,0), new Point2D(0,1), new Point2D(0,2) },  // J şekli
-        new Point2D[]{ new Point2D(0,0), new Point2D(1,0), new Point2D(0,1), new Point2D(-1,1) },  // S şekli
-        new Point2D[]{ new Point2D(0,0), new Point2D(-1,0), new Point2D(0,1), new Point2D(1,1) },  // Z şekli
-        // --- 3x3 dolu kare (9 blok) ---
-        new Point2D[]{
+    private static final Point2D[][] TETROMINOS = {
+        { 
+        	new Point2D(0,0), new Point2D(1,0), new Point2D(2,0), 
+        				      new Point2D(1,1) 
+        },         
+        { 
+        	new Point2D(0,0), new Point2D(1,0), new Point2D(2,0), new Point2D(3,0) 
+        }, 
+        { 
+        	new Point2D(0,0), new Point2D(1,0), new Point2D(2,0), new Point2D(3,0) 
+        }, 
+        { 
+        	new Point2D(0,0), new Point2D(1,0), 
+        	new Point2D(0,1), new Point2D(1,1) 
+        },  
+        { 
+        	new Point2D(0,0), new Point2D(1,0), 
+        	new Point2D(0,1), new Point2D(1,1) 
+        },   
+        { 
+        	new Point2D(0,0), 
+        	new Point2D(0,1), 
+        	new Point2D(0,2), new Point2D(1,2) 
+        },         
+        { 
+        					new Point2D(1,0), 
+        					new Point2D(1,1),
+           new Point2D(0,2),new Point2D(1,2)
+        	
+        },         
+        { 
+        	new Point2D(0,0), new Point2D(1,0), 
+        					  new Point2D(1,1),new Point2D(2,1) 
+        					  
+        },         
+        { 
+        					  new Point2D(1,0), new Point2D(2,0), 
+        	new Point2D(0,1), new Point2D(1,1) 
+        },         
+        {
             new Point2D(0,0), new Point2D(1,0), new Point2D(2,0),
             new Point2D(0,1), new Point2D(1,1), new Point2D(2,1),
             new Point2D(0,2), new Point2D(1,2), new Point2D(2,2)
-        }
-    );
-
-    // Şekillere rastgele renk atamak için kullanılacak renk listesi
-    private static final List<Color> COLORS = Arrays.asList(
-        Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW, Color.PURPLE, Color.ORANGE, Color.CYAN
-    );
-
-    // Oyun tahtasındaki hücrelerin renklerini tutar. Null ise boş demektir.
-    private Color[][] board = new Color[GRID_SIZE][GRID_SIZE];
-
-    // Her hücre için ekranda gösterilecek Rectangle nesnesi
-    private Rectangle[][] cellRects = new Rectangle[GRID_SIZE][GRID_SIZE];
-
-    // JavaFX'deki ana bileşenler
-    private Pane root;       // Tüm arayüzün kök paneli
-    private Pane gridPane;   // Oyun alanı (grid)
-    private HBox inventory;  // Envanter (altta görünen şekil slotları)
+        }, 
+        {
+            new Point2D(0,0), new Point2D(1,0), new Point2D(2,0),
+            new Point2D(0,1), new Point2D(1,1), new Point2D(2,1),
+            new Point2D(0,2), new Point2D(1,2), new Point2D(2,2)
+        }, 
+        {
+            new Point2D(0,0), 
+            new Point2D(0,1), 
+            new Point2D(0,2), new Point2D(1,2),new Point2D(2,2)
+            
+        }, 
+        {
+        									   new Point2D(2,0), 
+        									   new Point2D(2,1), 
+            new Point2D(0,2), new Point2D(1,2),new Point2D(2,2)
+            
+        }, 
+        { 
+        	new Point2D(0,0), new Point2D(1,0) 
+        },                                            
+        { 
+        	new Point2D(0,0), 
+        	new Point2D(0,1), new Point2D(1,1) 
+        },
+        { 
+        	                  new Point2D(1,0), 
+        	new Point2D(0,1), new Point2D(1,1) 
+        },
+        { 
+        	new Point2D(0,0), new Point2D(1,0), new Point2D(2,0),
+        	new Point2D(0,1), new Point2D(1,1), new Point2D(2,1) 
+        },
+        { 
+        	new Point2D(0,0), new Point2D(1,0), new Point2D(2,0),
+        	new Point2D(0,1), new Point2D(1,1), new Point2D(2,1) 
+        }  
+    };
 
     /**
-     * Envanterdeki 4 slotun tuttuğu şekiller.
-     * Slot boşsa null olur.
+     * canlı renk paleti
      */
-    private List<ShapeInfo> upcoming = new ArrayList<>();
+    private static final Color[] COLORS = {
+    	    Color.web("#ffb74d"), // Turuncu
+    	    Color.web("#fff176"), // Sarı
+    	    Color.web("#f06292"), // Pembe
+    	    Color.web("#ef5350"), // Kırmızı
+    	    Color.web("#81c784"), // Yeşil
+    	    Color.web("#9575cd"), // Mor
+    	    Color.web("#4dd0e1"), // Camgöbeği (açık mavi, sadece 1 adet)
+    	    Color.web("#ff8a65")  // Somon / Şeftali
+    	};
 
-    // Rastgele şekil ve renk seçmek için Random nesnesi
+    // Oyun alanındaki hücrelerin renklerini tutar (null ise boş)
+    private Color[][] board = new Color[GRID_SIZE][GRID_SIZE];
+
+    // Her hücrenin ekranda karşılığı olan Rectangle (görsel kare)
+    private Rectangle[][] cellRects = new Rectangle[GRID_SIZE][GRID_SIZE];
+
+    // JavaFX'in ana paneli (tüm arayüzün kök container'ı)
+    private Pane root;
+    // Oyun alanı paneli
+    private Pane gridPane;
+    // Envanter paneli (altta 4 slot)
+    private HBox inventory;
+
+    // Envanterdeki mevcut şekiller (4 slot)
+    private ShapeInfo[] upcoming = new ShapeInfo[4];
+
+    // Rastgelelik için Random nesnesi (şekil ve renk için)
     private Random rnd = new Random();
 
-    // Sürüklerken grid üzerinde gösterilen "hayalet bloklar" listesi (transparan önizleme için)
-    private List<Rectangle> previewGhost = new ArrayList<>();
+    // Sürüklerken grid üzerinde gösterilen "hayalet bloklar" için dizi (max 16 bloklu şekil için yeterli)
+    private Rectangle[] previewGhost = new Rectangle[16];
+    private int previewGhostCount = 0; // Kaç tane hayalet var
 
-    // Sürükleme sırasında geçici olarak tutulan bilgiler
-    private Point2D dragOffset;          // Mouse ile şekil arasındaki mesafe
-    private ShapeInfo draggingShape;     // Şu an sürüklenen şekil
-    private Pane draggingUI;             // Sürüklenen şeklin görsel bileşeni
+    // Sürüklenen şekille ilgili bilgiler
+    private Point2D dragOffset;
+    private ShapeInfo draggingShape;
+    private Pane draggingUI;
+
+    // Skor değişkeni ve ekranda gözüken skor etiketi
+    private int score = 0;
+    private Label scoreLabel;
 
     /**
      * JavaFX uygulamasının başlangıç fonksiyonu.
-     * Arayüz, tahta ve envanter burada oluşturulur.
+     * Ekranda panel, oyun alanı, envanter ve skor etiketi burada oluşturuluyor.
      */
     @Override
     public void start(Stage primaryStage) {
-        // Ana kök panel ve pencere boyutu belirlenir
+        // Ana paneli oluştur, arka planı Block Blast'a yakın bir gradient ile ayarla
         root = new Pane();
-        root.setPrefSize(GRID_SIZE * CELL_SIZE + 20, GRID_SIZE * CELL_SIZE + CELL_SIZE * 2 + 30);
+        root.setStyle("-fx-background-color: linear-gradient(to bottom, #5c73bc, #5763ad 80%, #485090 100%);");
+        root.setPrefSize(GRID_SIZE * CELL_SIZE + 20, GRID_SIZE * CELL_SIZE + CELL_SIZE * 2 + 70);
 
-        // Oyun alanı oluşturuluyor (gri kareler)
+        // Skor etiketi (ekranın üstüne ortalanmış, sade)
+        scoreLabel = new Label("0");
+        scoreLabel.setStyle(
+            "-fx-font-size: 36px; " +
+            "-fx-font-family: 'Arial Rounded MT Bold', Arial, sans-serif; " +
+            "-fx-text-fill: #0a061a; " +   
+            "-fx-background-color: transparent; " +
+            "-fx-padding: 0;"
+        );
+        double labelWidth = 120;
+        scoreLabel.setPrefWidth(labelWidth);
+        // Skor etiketi ekranın ortasında olsun
+        scoreLabel.setLayoutX((GRID_SIZE * CELL_SIZE + 20 - labelWidth) / 2.0);
+        scoreLabel.setLayoutY(8);
+        scoreLabel.setAlignment(javafx.geometry.Pos.CENTER);
+        root.getChildren().add(scoreLabel);
+
+        // Oyun alanı gridini oluştur (panel)
         gridPane = new Pane();
         gridPane.setLayoutX(GRID_OFFSET.getX());
         gridPane.setLayoutY(GRID_OFFSET.getY());
         gridPane.setPrefSize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
-        gridPane.setStyle("-fx-background-color: lightgray;");
+        // Block Blast'ta olduğu gibi koyu bir grid arka planı
+        gridPane.setStyle("-fx-background-color: #2d355e; -fx-border-radius: 10; -fx-background-radius: 10;");
 
-        // Oyun alanı gridindeki her hücreyi oluştur
+        // Her grid hücresi için Rectangle oluştur
         for (int r = 0; r < GRID_SIZE; r++) {
             for (int c = 0; c < GRID_SIZE; c++) {
                 Rectangle cell = new Rectangle(CELL_SIZE - 2, CELL_SIZE - 2);
-                cell.setStroke(Color.WHITE);    // Hücre kenarları için çizgi
-                cell.setFill(Color.WHITE);      // Boş hücre beyaz
+                cell.setStroke(Color.web("#414a6e")); // Kare kenarları: koyu mor-mavi
+                cell.setFill(Color.web("#232a4d"));  // Koyu mavi, gridde boş alanlar için
                 cell.setX(c * CELL_SIZE + 1);
                 cell.setY(r * CELL_SIZE + 1);
-                board[r][c] = null;             // Mantıksal olarak da boş
+                board[r][c] = null;
                 cellRects[r][c] = cell;
                 gridPane.getChildren().add(cell);
             }
         }
         root.getChildren().add(gridPane);
 
-        // Envanter (altta 4 kutu) oluşturuluyor
-        int invY = (int)(GRID_OFFSET.getY() + GRID_SIZE * CELL_SIZE + 10);
+        // Envanter paneli (altta 4 slot olacak)
+        int invY = (int)(GRID_OFFSET.getY() + GRID_SIZE * CELL_SIZE + 10); // Y ekseninde gridin altına hizala
         int invWidth = GRID_SIZE * CELL_SIZE;
         int invHeight = CELL_SIZE * 2;
         int slotWidth = invWidth / 4;
@@ -126,74 +220,79 @@ public class Main extends Application {
         inventory.setLayoutX(GRID_OFFSET.getX());
         inventory.setLayoutY(invY);
         inventory.setPrefSize(invWidth, invHeight);
-        // 4 slotu oluştur
+        // 4 adet envanter slotu oluştur 
         for (int i = 0; i < 4; i++) {
             Pane slot = new Pane();
             slot.setPrefSize(slotWidth, invHeight);
-            slot.setStyle("-fx-border-color: gray; -fx-background-color: rgba(200,200,200,0.5);");
+            slot.setStyle(
+                "-fx-background-color: #354074;" +
+                "-fx-border-color: #414a6e; -fx-border-width: 1.5; " +
+                "-fx-border-radius: 18; -fx-background-radius: 16;"
+            );
             inventory.getChildren().add(slot);
         }
         root.getChildren().add(inventory);
 
-        // Oyuna başlarken ilk 4'lü şekil setini üret
+        // Oyunun başında 4 yeni şekil oluştur ve envantere yerleştir
         generateNewSet();
         rebuildInventory();
 
-        // JavaFX sahnesini başlat ve göster
+        // JavaFX sahnesini başlat ve ana pencereyi göster
         Scene scene = new Scene(root);
         primaryStage.setScene(scene);
-        primaryStage.setTitle("Block Blast - 4'lü Slot Sistemi");
+        primaryStage.setTitle("Block Blast");
         primaryStage.show();
     }
 
     /**
-     * Envanterdeki 4 slotun hepsi kullanıldı mı (hepsi boş mu)?
+     * Envanterdeki 4 slotun hepsi boş mu? (yani tüm şekiller kullanıldı mı)
      */
     private boolean allShapesUsed() {
-        for (ShapeInfo shape : upcoming)
-            if (shape != null)
+        for (int i = 0; i < upcoming.length; i++)
+            if (upcoming[i] != null)
                 return false;
         return true;
     }
 
     /**
-     * Yeni 4 farklı şekil seti üretir ve envantere yerleştirir.
-     * Her sette şekillerin tipi birbirinden farklı olur.
+     * Envantere 4 yeni rastgele ve birbirinden farklı şekil ekler.
+     * Şekillerin renkleri ve dönüşleri de rastgeledir.
      */
     private void generateNewSet() {
-        upcoming.clear();
-        Set<Integer> usedIndices = new HashSet<>();
-        while (upcoming.size() < 4) {
-            int idx = rnd.nextInt(TETROMINOS.size());
-            if (usedIndices.add(idx)) {
-                Point2D[] base = TETROMINOS.get(idx);
-                int rot = rnd.nextInt(4); // Rasgele döndürme (rotasyon)
+        for (int i = 0; i < 4; i++) upcoming[i] = null;
+        boolean[] usedIndices = new boolean[TETROMINOS.length];
+        int added = 0;
+        while (added < 4) {
+            int idx = rnd.nextInt(TETROMINOS.length);
+            if (!usedIndices[idx]) {
+                usedIndices[idx] = true;
+                Point2D[] base = TETROMINOS[idx];
+                int rot = rnd.nextInt(4); // Rastgele rotasyon (0, 90, 180, 270 derece)
                 Point2D[] pts = new Point2D[base.length];
                 for (int i = 0; i < base.length; i++) {
                     Point2D p = base[i];
-                    for (int r = 0; r < rot; r++) p = new Point2D(-p.getY(), p.getX()); // Saat yönünde döndür
+                    for (int r = 0; r < rot; r++) p = new Point2D(-p.getY(), p.getX());
                     pts[i] = p;
                 }
-                Color c = COLORS.get(rnd.nextInt(COLORS.size())); // Rasgele renk
-                upcoming.add(new ShapeInfo(pts, c));
+                Color c = COLORS[rnd.nextInt(COLORS.length)];
+                upcoming[added] = new ShapeInfo(pts, c);
+                added++;
             }
         }
     }
 
     /**
-     * Envanterdeki şekilleri slotlara yerleştirir.
-     * Slot boşsa bir şey çizilmez.
+     * Envanterdeki slotlara şekilleri yerleştirir.
+     * Slot boşsa bir şey gösterilmez.
      */
     private void rebuildInventory() {
-        for (int i = 0; i < inventory.getChildren().size(); i++) {
+        for (int i = 0; i < 4; i++) {
             Pane slot = (Pane) inventory.getChildren().get(i);
             slot.getChildren().clear();
-            ShapeInfo info = upcoming.get(i);
-            if (info == null)
-                continue;
+            ShapeInfo info = upcoming[i];
+            if (info == null) continue;
             Pane ui = info.createUI();
             slot.getChildren().add(ui);
-            // Drag and drop olaylarını ekle
             ui.setOnMousePressed(this::startDrag);
             ui.setOnMouseDragged(this::doDrag);
             ui.setOnMouseReleased(this::endDrag);
@@ -206,20 +305,20 @@ public class Main extends Application {
     private void startDrag(MouseEvent e) {
         Pane source = (Pane) e.getSource();
         int idx = -1;
-        for (int i = 0; i < inventory.getChildren().size(); i++) {
+        for (int i = 0; i < 4; i++) {
             if (inventory.getChildren().get(i) == source.getParent()) {
                 idx = i;
                 break;
             }
         }
-        draggingShape = upcoming.get(idx);
+        draggingShape = upcoming[idx];
         draggingUI = source;
         dragOffset = new Point2D(e.getSceneX() - source.getLayoutX(), e.getSceneY() - source.getLayoutY());
         hoverPreview(e.getSceneX(), e.getSceneY());
     }
 
     /**
-     * Şekil sürüklenirken çağrılır.
+     * Şekil sürüklenirken sürekli çağrılır.
      */
     private void doDrag(MouseEvent e) {
         draggingUI.setLayoutX(e.getSceneX() - dragOffset.getX());
@@ -228,8 +327,7 @@ public class Main extends Application {
     }
 
     /**
-     * Kullanıcı sürüklediği şekli bıraktığında (mouse bırakıldığında) çağrılır.
-     * Eğer uygun yere bırakılmışsa şekil yerleştirilir, slot boşaltılır ve gerekiyorsa yeni set oluşturulur.
+     * Sürükleme bitince (mouse bırakınca) çağrılır.
      */
     private void endDrag(MouseEvent e) {
         clearPreview();
@@ -238,21 +336,30 @@ public class Main extends Application {
         int col = (int) (x / CELL_SIZE);
         int row = (int) (y / CELL_SIZE);
 
+        boolean placed = false;
         if (draggingShape != null && canPlace(draggingShape, row, col)) {
             placeShape(draggingShape, row, col);
             clearFullLines();
-            int idx = upcoming.indexOf(draggingShape);
-            upcoming.set(idx, null); // slotu boşalt
-            if (allShapesUsed()) {
-                generateNewSet(); // Hepsi bitince 4 yeni şekil gelsin
+            int idx = -1;
+            for (int i = 0; i < 4; i++) {
+                if (upcoming[i] == draggingShape) {
+                    idx = i;
+                    break;
+                }
             }
-            rebuildInventory();
+            if (idx != -1)
+                upcoming[idx] = null;
+            if (allShapesUsed()) {
+                generateNewSet();
+            }
+            placed = true;
         }
+        rebuildInventory();
         draggingShape = null;
     }
 
     /**
-     * Sürüklenen şekil nereye bırakılacaksa orada transparan bir önizleme gösterir.
+     * Şekil gridde nereye bırakılırsa bırakılsın, mouse konumunda "önizleme" olarak transparan bloklar çizer.
      */
     private void hoverPreview(double sceneX, double sceneY) {
         clearPreview();
@@ -263,76 +370,99 @@ public class Main extends Application {
         int col = (int) (x / CELL_SIZE);
         int row = (int) (y / CELL_SIZE);
 
-        for (Point2D p : draggingShape.points) {
+        previewGhostCount = 0;
+        for (int i = 0; i < draggingShape.points.length; i++) {
+            Point2D p = draggingShape.points[i];
             int r = row + (int) p.getY();
             int c = col + (int) p.getX();
             if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE) {
                 Rectangle ghost = new Rectangle(CELL_SIZE - 2, CELL_SIZE - 2);
                 ghost.setX(GRID_OFFSET.getX() + c * CELL_SIZE + 1);
                 ghost.setY(GRID_OFFSET.getY() + r * CELL_SIZE + 1);
-                ghost.setFill(draggingShape.color.deriveColor(1, 1, 1, 0.3)); // Transparan
-                previewGhost.add(ghost);
+                ghost.setFill(draggingShape.color.deriveColor(1, 1, 1, 0.24)); // Transparan blok
+                previewGhost[previewGhostCount++] = ghost;
                 root.getChildren().add(ghost);
             }
         }
     }
 
     /**
-     * Önizleme (ghost) karelerini ekrandan temizler.
+     * Tüm transparan önizleme bloklarını ekrandan siler.
      */
     private void clearPreview() {
-        for (Rectangle ghost : previewGhost) root.getChildren().remove(ghost);
-        previewGhost.clear();
+        for (int i = 0; i < previewGhostCount; i++) {
+            root.getChildren().remove(previewGhost[i]);
+        }
+        previewGhostCount = 0;
     }
 
     /**
-     * Şekil belirtilen grid pozisyonuna yerleştirilebilir mi?
+     * Bir şekli, gridde (satır, sütun) başlangıç noktası olarak yerleştirilebilir mi?
+     * Her bir bloğun grid sınırları içinde ve boş olması gerekir.
      */
     private boolean canPlace(ShapeInfo shape, int baseRow, int baseCol) {
-        for (Point2D p : shape.points) {
+        for (int i = 0; i < shape.points.length; i++) {
+            Point2D p = shape.points[i];
             int r = baseRow + (int) p.getY();
             int c = baseCol + (int) p.getX();
-            // Grid dışına taşma veya üst üste binme kontrolü
             if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE || board[r][c] != null) return false;
         }
         return true;
     }
 
     /**
-     * Şekli gridde ilgili yere yerleştirir (görseli de günceller).
+     * Şekli gridde ilgili hücrelere yerleştirir. Her blok için 10 puan ekler.
      */
     private void placeShape(ShapeInfo shape, int baseRow, int baseCol) {
-        for (Point2D p : shape.points) {
+        for (int i = 0; i < shape.points.length; i++) {
+            Point2D p = shape.points[i];
             int r = baseRow + (int) p.getY();
             int c = baseCol + (int) p.getX();
             board[r][c] = shape.color;
             cellRects[r][c].setFill(shape.color);
+            score += 10; // Her blok için puan ekle
         }
+        updateScoreLabel();
     }
 
     /**
-     * Oyun alanındaki dolmuş satır ve sütunları temizler (klasik Block Blast mantığı).
+     * Satır veya sütun tamamen dolduysa temizler, her patlama için 500 puan ekler.
      */
     private void clearFullLines() {
-        // Satırlar
+        // Satır kontrolü
         for (int r = 0; r < GRID_SIZE; r++) {
             boolean full = true;
             for (int c = 0; c < GRID_SIZE; c++) if (board[r][c] == null) full = false;
-            if (full) for (int c = 0; c < GRID_SIZE; c++) { board[r][c] = null; cellRects[r][c].setFill(Color.WHITE); }
+            if (full) {
+                for (int c = 0; c < GRID_SIZE; c++) { board[r][c] = null; cellRects[r][c].setFill(Color.web("#232a4d")); }
+                score += 500;
+            }
         }
-        // Sütunlar
+        // Sütun kontrolü
         for (int c = 0; c < GRID_SIZE; c++) {
             boolean full = true;
             for (int r = 0; r < GRID_SIZE; r++) if (board[r][c] == null) full = false;
-            if (full) for (int r = 0; r < GRID_SIZE; r++) { board[r][c] = null; cellRects[r][c].setFill(Color.WHITE); }
+            if (full) {
+                for (int r = 0; r < GRID_SIZE; r++) { board[r][c] = null; cellRects[r][c].setFill(Color.web("#232a4d")); }
+                score += 500;
+            }
         }
+        updateScoreLabel();
     }
 
     /**
-     * Şekil nesnesi: Her şekil hem bloklarının yerlerini hem de rengini tutar.
+     * Skor etiketini günceller.
+     */
+    private void updateScoreLabel() {
+        scoreLabel.setText(Integer.toString(score));
+    }
+
+    /**
+     * Şeklin pozisyon ve rengini tutan iç sınıf.
+     * Her şekil hem hangi hücrelerde oluşacak hem de hangi renkte olacak onu tutar.
      */
     private class ShapeInfo {
-        Point2D[] points; // Şeklin bloklarının grid üzerindeki yerleri
+        Point2D[] points; // Blokların yerleri (şekil tanımı)
         Color color;      // Şeklin rengi
 
         public ShapeInfo(Point2D[] points, Color color) {
@@ -341,19 +471,19 @@ public class Main extends Application {
         }
 
         /**
-         * Şeklin küçük bir görselini (envanterde göstermek için) oluşturur.
-         * Bütün bloklar slotun ortasına sığacak şekilde çizilir.
+         * Şeklin küçük önizlemesini üretir (envanterdeki slot için)
+         * Blokların kenarları yumuşatmasız, canlı ve net renkler kullanılır.
          */
         public Pane createUI() {
             Pane p = new Pane();
             p.setPrefSize(CELL_SIZE * 2, CELL_SIZE * 2);
 
-            // Şeklin gridde kapladığı alanı (bounding box) bul
+            // Şeklin gridde kapladığı alanı (minimum ve maksimum x/y) bul
             int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
             int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
-            for (Point2D pt : points) {
-                int x = (int) pt.getX();
-                int y = (int) pt.getY();
+            for (int i = 0; i < points.length; i++) {
+                int x = (int) points[i].getX();
+                int y = (int) points[i].getY();
                 if (x < minX) minX = x;
                 if (x > maxX) maxX = x;
                 if (y < minY) minY = y;
@@ -362,20 +492,21 @@ public class Main extends Application {
             int gridW = (maxX - minX + 1);
             int gridH = (maxY - minY + 1);
 
-            // Blokların boyutu: slotu dolduracak şekilde otomatik küçültülür
-            double blockSize = Math.min((CELL_SIZE * 2.0) / gridW, (CELL_SIZE * 2.0) / gridH) * 0.85;
+            // Blokların boyutu slotun alanına orantılı ve ortalanmış şekilde hesaplanır
+            double blockSize = Math.min((CELL_SIZE * 2.0) / gridW, (CELL_SIZE * 2.0) / gridH) * 0.82;
             double totalW = gridW * blockSize;
             double totalH = gridH * blockSize;
             double offsetX = (CELL_SIZE * 2 - totalW) / 2.0;
             double offsetY = (CELL_SIZE * 2 - totalH) / 2.0;
 
-            // Her bloğu hesaplanan pozisyona çiz
-            for (Point2D pt : points) {
+            // Her blok için bir Rectangle ekle
+            for (int i = 0; i < points.length; i++) {
                 Rectangle rect = new Rectangle(blockSize, blockSize);
                 rect.setFill(color);
-                rect.setStroke(Color.BLACK);
-                rect.setLayoutX(offsetX + (pt.getX() - minX) * blockSize);
-                rect.setLayoutY(offsetY + (pt.getY() - minY) * blockSize);
+                rect.setStroke(Color.web("#232a4d")); // Blok kenar rengi (koyu grid kenarı)
+                rect.setStrokeWidth(1.5);
+                rect.setLayoutX(offsetX + (points[i].getX() - minX) * blockSize);
+                rect.setLayoutY(offsetY + (points[i].getY() - minY) * blockSize);
                 p.getChildren().add(rect);
             }
             return p;
@@ -383,7 +514,7 @@ public class Main extends Application {
     }
 
     /**
-     * Ana giriş noktası. Uygulamayı başlatır.
+     * JavaFX uygulamasını başlatır.
      */
     public static void main(String[] args) {
         launch(args);
