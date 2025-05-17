@@ -166,7 +166,8 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
         // Ana paneli oluştur, arka planı Block Blast'a yakın bir gradient ile ayarla
-        root = new Pane();
+    	primaryStage.setResizable(false);
+    	root = new Pane();
         root.setStyle("-fx-background-color: linear-gradient(to bottom, #5c73bc, #5763ad 80%, #485090 100%);");
         root.setPrefSize(GRID_SIZE * CELL_SIZE + 20, GRID_SIZE * CELL_SIZE + CELL_SIZE * 2 + 70);
 
