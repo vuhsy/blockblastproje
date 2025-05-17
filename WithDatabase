@@ -1,0 +1,342 @@
+package application;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.Random;
+
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.geometry.Point2D;
+import javafx.scene.Scene;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
+
+public class Mainn extends Application {
+    // JDBC bağlantı bilgileri
+    private static final String DB_URL  = "jdbc:mysql://localhost:3306/mydb?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC";
+    private static final String DB_USER = "root";
+    private static final String DB_PASS = "Ecem342343";
+
+    private Connection dbConnection;
+    private String playerName;
+
+    // Oyun sabitleri
+    private static final int GRID_SIZE = 10;
+    private static final int CELL_SIZE = 60;
+    private static final Point2D GRID_OFFSET = new Point2D(10, 60);
+
+    private static final Point2D[][] TETROMINOS = {
+        {new Point2D(0,0), new Point2D(1,0), new Point2D(2,0), new Point2D(1,1)},
+        {new Point2D(0,0), new Point2D(1,0), new Point2D(2,0), new Point2D(3,0)},
+        {new Point2D(0,0), new Point2D(1,0), new Point2D(2,0), new Point2D(3,0)},
+        {new Point2D(0,0), new Point2D(1,0), new Point2D(0,1), new Point2D(1,1)},
+        {new Point2D(0,0), new Point2D(1,0), new Point2D(0,1), new Point2D(1,1)},
+        {new Point2D(0,0), new Point2D(0,1), new Point2D(0,2), new Point2D(1,2)},
+        {new Point2D(1,0), new Point2D(1,1), new Point2D(0,2), new Point2D(1,2)},
+        {new Point2D(0,0), new Point2D(1,0), new Point2D(1,1), new Point2D(2,1)},
+        {new Point2D(1,0), new Point2D(2,0), new Point2D(0,1), new Point2D(1,1)},
+        {new Point2D(0,0), new Point2D(1,0), new Point2D(2,0), new Point2D(0,1), new Point2D(1,1), new Point2D(2,1), new Point2D(0,2), new Point2D(1,2), new Point2D(2,2)},
+        {new Point2D(0,0), new Point2D(1,0), new Point2D(2,0), new Point2D(0,1), new Point2D(1,1), new Point2D(2,1), new Point2D(0,2), new Point2D(1,2), new Point2D(2,2)},
+        {new Point2D(0,0), new Point2D(0,1), new Point2D(0,2), new Point2D(1,2), new Point2D(2,2)},
+        {new Point2D(2,0), new Point2D(2,1), new Point2D(0,2), new Point2D(1,2), new Point2D(2,2)},
+        {new Point2D(0,0), new Point2D(1,0)},
+        {new Point2D(0,0), new Point2D(0,1), new Point2D(1,1)},
+        {new Point2D(1,0), new Point2D(0,1), new Point2D(1,1)},
+        {new Point2D(0,0), new Point2D(1,0), new Point2D(2,0), new Point2D(0,1), new Point2D(1,1), new Point2D(2,1)},
+        {new Point2D(0,0), new Point2D(1,0), new Point2D(2,0), new Point2D(0,1), new Point2D(1,1), new Point2D(2,1)}
+    };
+
+    private static final Color[] COLORS = {
+        Color.web("#ffb74d"), Color.web("#fff176"), Color.web("#f06292"), Color.web("#ef5350"),
+        Color.web("#81c784"), Color.web("#9575cd"), Color.web("#4dd0e1"), Color.web("#ff8a65")
+    };
+
+    // Oyun durumu ve bileşenler
+    private Color[][] board = new Color[GRID_SIZE][GRID_SIZE];
+    private Rectangle[][] cellRects = new Rectangle[GRID_SIZE][GRID_SIZE];
+    private Pane root, gridPane;
+    private HBox inventory;
+    private ShapeInfo[] upcoming = new ShapeInfo[4];
+    private Random rnd = new Random();
+    private Rectangle[] previewGhost = new Rectangle[16];
+    private int previewGhostCount = 0;
+    private Point2D dragOffset;
+    private ShapeInfo draggingShape;
+    private Pane draggingUI;
+    private int score = 0;
+    private Label scoreLabel;
+
+    @Override
+    public void start(Stage primaryStage) throws Exception {
+        // 1) Oyuncu adını sor
+        TextInputDialog dlg = new TextInputDialog();
+        dlg.setTitle("Oyuncu Adı");
+        dlg.setHeaderText("Lütfen oyuncu adınızı girin:");
+        Optional<String> name = dlg.showAndWait();
+        if (name.isEmpty() || name.get().trim().isEmpty()) {
+            Platform.exit();
+            return;
+        }
+        playerName = name.get().trim();
+
+        // 2) Veritabanı bağlantısı
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        dbConnection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+
+        // 3) Oyun UI
+        root = new Pane();
+        root.setStyle("-fx-background-color: linear-gradient(to bottom, #5c73bc, #5763ad 80%, #485090 100%);");
+        root.setPrefSize(GRID_SIZE * CELL_SIZE + 20, GRID_SIZE * CELL_SIZE + CELL_SIZE * 2 + 70);
+
+        scoreLabel = new Label("0");
+        scoreLabel.setStyle("-fx-font-size:36px; -fx-font-family:'Arial Rounded MT Bold'; -fx-text-fill:#0a061a;");
+        scoreLabel.setPrefWidth(120);
+        scoreLabel.setLayoutX((GRID_SIZE * CELL_SIZE + 20 - 120) / 2);
+        scoreLabel.setLayoutY(8);
+        scoreLabel.setAlignment(javafx.geometry.Pos.CENTER);
+        root.getChildren().add(scoreLabel);
+
+        gridPane = new Pane();
+        gridPane.setLayoutX(GRID_OFFSET.getX());
+        gridPane.setLayoutY(GRID_OFFSET.getY());
+        gridPane.setPrefSize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+        gridPane.setStyle("-fx-background-color:#2d355e; -fx-border-radius:10; -fx-background-radius:10;");
+        for (int r = 0; r < GRID_SIZE; r++) {
+            for (int c = 0; c < GRID_SIZE; c++) {
+                Rectangle cell = new Rectangle(CELL_SIZE - 2, CELL_SIZE - 2);
+                cell.setStroke(Color.web("#414a6e"));
+                cell.setFill(Color.web("#232a4d"));
+                cell.setX(c * CELL_SIZE + 1);
+                cell.setY(r * CELL_SIZE + 1);
+                board[r][c] = null;
+                cellRects[r][c] = cell;
+                gridPane.getChildren().add(cell);
+            }
+        }
+        root.getChildren().add(gridPane);
+
+        inventory = new HBox();
+        inventory.setLayoutX(GRID_OFFSET.getX());
+        inventory.setLayoutY(GRID_OFFSET.getY() + GRID_SIZE * CELL_SIZE + 10);
+        inventory.setPrefSize(GRID_SIZE * CELL_SIZE, CELL_SIZE * 2);
+        int slotW = (GRID_SIZE * CELL_SIZE) / 4;
+        for (int i = 0; i < 4; i++) {
+            Pane slot = new Pane();
+            slot.setPrefSize(slotW, CELL_SIZE * 2);
+            slot.setStyle("-fx-background-color:#354074; -fx-border-color:#414a6e; -fx-border-width:1.5; -fx-border-radius:18; -fx-background-radius:16;");
+            inventory.getChildren().add(slot);
+        }
+        root.getChildren().add(inventory);
+
+        generateNewSet();
+        rebuildInventory();
+
+        Scene scene = new Scene(root);
+        scene.setOnMousePressed(this::startDrag);
+        scene.setOnMouseDragged(this::doDrag);
+        scene.setOnMouseReleased(this::endDrag);
+
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Block Blast");
+        primaryStage.show();
+    }
+
+    @Override
+    public void stop() {
+        try {
+            saveResult(dbConnection, playerName, score);
+            dbConnection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveResult(Connection con, String user, int sc) throws SQLException {
+        String sql = "INSERT INTO game_results(username, score, played_at) VALUES (?, ?, ?)";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, user);
+            ps.setInt(2, sc);
+            ps.setObject(3, LocalDateTime.now());
+            ps.executeUpdate();
+        }
+    }
+
+    private boolean allShapesUsed() {
+        for (ShapeInfo s : upcoming) if (s != null) return false;
+        return true;
+    }
+
+    private void generateNewSet() {
+        for (int i = 0; i < upcoming.length; i++) upcoming[i] = null;
+        boolean[] used = new boolean[TETROMINOS.length];
+        int added = 0;
+        while (added < 4) {
+            int idx = rnd.nextInt(TETROMINOS.length);
+            if (!used[idx]) {
+                used[idx] = true;
+                Point2D[] base = TETROMINOS[idx];
+                Point2D[] pts = new Point2D[base.length];
+                int rot = rnd.nextInt(4);
+                for (int i = 0; i < base.length; i++) {
+                    Point2D p = base[i];
+                    for (int r = 0; r < rot; r++) p = new Point2D(-p.getY(), p.getX());
+                    pts[i] = p;
+                }
+                upcoming[added++] = new ShapeInfo(pts, COLORS[rnd.nextInt(COLORS.length)]);
+            }
+        }
+    }
+
+    private void rebuildInventory() {
+        for (int i = 0; i < upcoming.length; i++) {
+            Pane slot = (Pane) inventory.getChildren().get(i);
+            slot.getChildren().clear();
+            ShapeInfo info = upcoming[i];
+            if (info == null) continue;
+            Pane ui = info.createUI();
+            slot.getChildren().add(ui);
+            ui.setOnMousePressed(this::startDrag);
+            ui.setOnMouseDragged(this::doDrag);
+            ui.setOnMouseReleased(this::endDrag);
+        }
+    }
+
+    private void startDrag(MouseEvent e) {
+        Pane src = (Pane) e.getSource();
+        int idx = inventory.getChildren().indexOf(src.getParent());
+        draggingShape = upcoming[idx];
+        draggingUI = src;
+        dragOffset = new Point2D(e.getSceneX() - src.getLayoutX(), e.getSceneY() - src.getLayoutY());
+        hoverPreview(e.getSceneX(), e.getSceneY());
+    }
+
+    private void doDrag(MouseEvent e) {
+        draggingUI.setLayoutX(e.getSceneX() - dragOffset.getX());
+        draggingUI.setLayoutY(e.getSceneY() - dragOffset.getY());
+        hoverPreview(e.getSceneX(), e.getSceneY());
+    }
+
+    private void endDrag(MouseEvent e) {
+        clearPreview();
+        int col = (int) ((e.getSceneX() - GRID_OFFSET.getX()) / CELL_SIZE);
+        int row = (int) ((e.getSceneY() - GRID_OFFSET.getY()) / CELL_SIZE);
+        if (draggingShape != null && canPlace(draggingShape, row, col)) {
+            placeShape(draggingShape, row, col);
+            clearFullLines();
+            int idx = java.util.Arrays.asList(upcoming).indexOf(draggingShape);
+            if (idx >= 0) upcoming[idx] = null;
+            if (allShapesUsed()) generateNewSet();
+        }
+        rebuildInventory();
+        draggingShape = null;
+    }
+
+    private void hoverPreview(double x, double y) {
+        clearPreview();
+        if (draggingShape == null) return;
+        int col = (int) ((x - GRID_OFFSET.getX()) / CELL_SIZE);
+        int row = (int) ((y - GRID_OFFSET.getY()) / CELL_SIZE);
+        int count = 0;
+        for (Point2D p : draggingShape.points) {
+            int r = row + (int) p.getY();
+            int c = col + (int) p.getX();
+            if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE) {
+                Rectangle g = new Rectangle(CELL_SIZE-2, CELL_SIZE-2);
+                g.setX(GRID_OFFSET.getX() + c*CELL_SIZE + 1);
+                g.setY(GRID_OFFSET.getY() + r*CELL_SIZE + 1);
+                g.setFill(draggingShape.color.deriveColor(1,1,1,0.24));
+                previewGhost[count++] = g;
+                root.getChildren().add(g);
+            }
+        }
+        previewGhostCount = count;
+    }
+
+    private void clearPreview() {
+        for (int i = 0; i < previewGhostCount; i++) root.getChildren().remove(previewGhost[i]);
+        previewGhostCount = 0;
+    }
+
+    private boolean canPlace(ShapeInfo s, int row, int col) {
+        for (Point2D p : s.points) {
+            int r = row + (int)p.getY();
+            int c = col + (int)p.getX();
+            if (r<0||r>=GRID_SIZE||c<0||c>=GRID_SIZE||board[r][c]!=null) return false;
+        }
+        return true;
+    }
+
+    private void placeShape(ShapeInfo s, int row, int col) {
+        for (Point2D p : s.points) {
+            int r = row + (int)p.getY();
+            int c = col + (int)p.getX();
+            board[r][c] = s.color;
+            cellRects[r][c].setFill(s.color);
+            score += 10;
+        }
+        updateScoreLabel();
+    }
+
+    private void clearFullLines() {
+        for (int r = 0; r < GRID_SIZE; r++) {
+            boolean full = true;
+            for (int c = 0; c < GRID_SIZE; c++) if (board[r][c]==null) full=false;
+            if (full) {
+                for (int c=0;c<GRID_SIZE;c++){
+                    board[r][c]=null;
+                    cellRects[r][c].setFill(Color.web("#232a4d"));
+                }
+                score += 500;
+            }
+        }
+        for (int c=0;c<GRID_SIZE;c++){
+            boolean full = true;
+            for (int r=0;r<GRID_SIZE;r++) if(board[r][c]==null) full=false;
+            if(full){
+                for(int r=0;r<GRID_SIZE;r++){
+                    board[r][c]=null;
+                    cellRects[r][c].setFill(Color.web("#232a4d"));
+                }
+                score +=500;
+            }
+        }
+        updateScoreLabel();
+    }
+
+    private void updateScoreLabel() {
+        scoreLabel.setText(Integer.toString(score));
+    }
+
+    private class ShapeInfo {
+        Point2D[] points;
+        Color color;
+        ShapeInfo(Point2D[] pts, Color c) { points=pts; color=c; }
+        public Pane createUI() {
+            Pane p = new Pane();
+            int minX=Integer.MAX_VALUE,minY=Integer.MAX_VALUE,maxX=Integer.MIN_VALUE,maxY=Integer.MIN_VALUE;
+            for(Point2D pt:points){int x=(int)pt.getX(),y=(int)pt.getY();minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}            
+            int w=maxX-minX+1,h=maxY-minY+1;
+            double bs=Math.min((CELL_SIZE*2.0)/w,(CELL_SIZE*2.0)/h)*0.82;
+            double ox=(CELL_SIZE*2-bs*w)/2,oy=(CELL_SIZE*2-bs*h)/2;
+            for(Point2D pt:points){
+                Rectangle r=new Rectangle(bs,bs);
+                r.setFill(color);
+                r.setStroke(Color.web("#232a4d"));
+                r.setStrokeWidth(1.5);
+                r.setLayoutX(ox+(pt.getX()-minX)*bs);
+                r.setLayoutY(oy+(pt.getY()-minY)*bs);
+                p.getChildren().add(r);
+            }
+            return p;
+        }
+    } }
