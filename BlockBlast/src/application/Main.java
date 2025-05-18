@@ -31,8 +31,13 @@ public class Main extends Application {
 	private static final String DB_URL  = "jdbc:mysql://localhost:3306/mydb?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC";
 	private static final String DB_USER = "root";
 	private static final String DB_PASS = "Emre13901390.";
+	
 	private Connection dbConnection;
 	private String playerName;
+	private int highScore = 0;
+	private String highScoreOwner = "-";
+	private Label highScoreLabel;
+
     // Oyun alanı (kaç satır ve sütun olacak)
     private static final int GRID_SIZE = 10;
 
@@ -140,7 +145,7 @@ public class Main extends Application {
     	    Color.web("#4dd0e1"), // Camgöbeği (açık mavi, sadece 1 adet)
     	    Color.web("#ff8a65")  // Somon / Şeftali
     	};
-
+    
     // Oyun alanındaki hücrelerin renklerini tutar (null ise boş)
     private Color[][] board = new Color[GRID_SIZE][GRID_SIZE];
 
@@ -182,6 +187,24 @@ public class Main extends Application {
             ps.executeUpdate();
         }
     }
+    private void loadHighScore(Connection con) {
+        String sql = "SELECT username, score FROM game_results ORDER BY score DESC, id ASC LIMIT 1";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            var rs = ps.executeQuery();
+            if (rs.next()) {
+                highScoreOwner = rs.getString("username");
+                highScore = rs.getInt("score");
+            } else {
+                highScoreOwner = "-";
+                highScore = 0;
+            }
+        } catch (SQLException e) {
+            highScoreOwner = "?";
+            highScore = 0;
+            e.printStackTrace();
+        }
+    }
+
     /**
      * JavaFX uygulamasının başlangıç fonksiyonu.
      * Ekranda panel, oyun alanı, envanter ve skor etiketi burada oluşturuluyor.
@@ -203,6 +226,7 @@ public class Main extends Application {
     	try {
     	    Class.forName("com.mysql.cj.jdbc.Driver");
     	    dbConnection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+    	    loadHighScore(dbConnection);
     	} catch (Exception ex) {
     	    ex.printStackTrace();
     	    Platform.exit();
@@ -230,6 +254,18 @@ public class Main extends Application {
         scoreLabel.setLayoutY(8);
         scoreLabel.setAlignment(javafx.geometry.Pos.CENTER);
         root.getChildren().add(scoreLabel);
+        highScoreLabel = new Label();
+        highScoreLabel.setStyle(
+            "-fx-font-size: 18px; " +
+            "-fx-font-family: Arial; " +
+            "-fx-text-fill: #444;" +
+            "-fx-background-color: transparent;"
+        );
+        // Konumunu ayarlayabilirsin:
+        highScoreLabel.setLayoutX(10);
+        highScoreLabel.setLayoutY(10);
+        highScoreLabel.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        root.getChildren().add(highScoreLabel);
 
         // Oyun alanı gridini oluştur (panel)
         gridPane = new Pane();
@@ -342,6 +378,19 @@ public class Main extends Application {
             ui.setOnMouseReleased(this::endDrag);
         }
     }
+ // Board'daki herhangi bir boşluğa, herhangi bir envanterdeki şekil yerleştirilebiliyor mu?
+    private boolean canPlaceAnyShape() {
+        for (ShapeInfo shape : upcoming) {
+            if (shape == null) continue;
+            for (int row = 0; row < GRID_SIZE; row++) {
+                for (int col = 0; col < GRID_SIZE; col++) {
+                    if (canPlace(shape, row, col))
+                        return true; // En az bir yere koyulabiliyor, oyun devam edebilir
+                }
+            }
+        }
+        return false; // Hiçbir şekil hiçbir yere konamıyor, oyun bitti
+    }
 
     /**
      * Kullanıcı bir şekli sürüklemeye başladığında çağrılır.
@@ -400,7 +449,52 @@ public class Main extends Application {
         }
         rebuildInventory();
         draggingShape = null;
+
+        // --- OYUN BİTTİ KONTROLÜ ---
+        if (!canPlaceAnyShape()) {
+            showGameOverPanel();
+        }
     }
+
+    // Game Over paneli ve yeniden başlatma için yardımcı method
+    private void showGameOverPanel() {
+        // Paneli oluştur
+        Pane panel = new Pane();
+        panel.setStyle("-fx-background-color: rgba(255,255,255,0.97); -fx-border-radius: 18; -fx-background-radius: 18; -fx-border-color: #aaaaff; -fx-border-width: 3;");
+        panel.setPrefSize(400, 220);
+        panel.setLayoutX((root.getWidth() - 400) / 2);
+        panel.setLayoutY((root.getHeight() - 220) / 2);
+
+        Label over = new Label("OYUN BİTTİ!");
+        over.setStyle("-fx-font-size: 38px; -fx-font-family: Arial Rounded MT Bold; -fx-text-fill: #5c73bc;");
+        over.setLayoutX(110); over.setLayoutY(30);
+
+        Label skor = new Label("Skorunuz: " + score);
+        skor.setStyle("-fx-font-size: 28px; -fx-font-family: Arial; -fx-text-fill: #222;");
+        skor.setLayoutX(135); skor.setLayoutY(90);
+
+        javafx.scene.control.Button again = new javafx.scene.control.Button("Yeniden Oyna");
+        again.setStyle("-fx-font-size: 20px; -fx-background-radius: 18; -fx-background-color: #5c73bc; -fx-text-fill: white; -fx-pref-width: 180;");
+        again.setLayoutX(110); again.setLayoutY(145);
+
+        // Skoru DB'ye burada da kaydedelim (ekstra güvenlik için)
+        try {
+            saveResult(dbConnection, playerName, score);
+            loadHighScore(dbConnection);   
+            updateScoreLabel();            
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+
+        again.setOnAction(ev -> {
+            root.getChildren().remove(panel);
+            resetGame();
+        });
+
+        panel.getChildren().addAll(over, skor, again);
+        root.getChildren().add(panel);
+    }
+
 
     /**
      * Şekil gridde nereye bırakılırsa bırakılsın, mouse konumunda "önizleme" olarak transparan bloklar çizer.
@@ -499,7 +593,9 @@ public class Main extends Application {
      */
     private void updateScoreLabel() {
         scoreLabel.setText(Integer.toString(score));
+        highScoreLabel.setText("En Yüksek Skor: " + highScore + " (" + highScoreOwner + ")");
     }
+    
 
     /**
      * Şeklin pozisyon ve rengini tutan iç sınıf.
@@ -572,4 +668,22 @@ public class Main extends Application {
             e.printStackTrace();
         }
     }
+    private void resetGame() {
+        // Board sıfırlanır
+        for (int r = 0; r < GRID_SIZE; r++) {
+            for (int c = 0; c < GRID_SIZE; c++) {
+                board[r][c] = null;
+                cellRects[r][c].setFill(Color.web("#232a4d"));
+            }
+        }
+        // Skor sıfırlanır
+        score = 0;
+        updateScoreLabel();
+        // Yeni şekiller oluşturulur
+        generateNewSet();
+        rebuildInventory();
+        
+        
+    }
+
 }
