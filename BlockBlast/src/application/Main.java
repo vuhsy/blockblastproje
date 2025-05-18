@@ -1,5 +1,14 @@
 package application;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import javafx.application.Platform;
+import javafx.scene.control.TextInputDialog;
+import java.util.Optional;
+
 import javafx.application.Application;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
@@ -18,7 +27,12 @@ import java.util.Random;
  * Renk paleti ve arka plan orijinal oyuna yakın olacak şekilde ayarlanmıştır.
  */
 public class Main extends Application {
-
+	//bu kısımda kendi mysql bilgilerinizi girmeniz lazım kodun çalışması için
+	private static final String DB_URL  = "jdbc:mysql://localhost:3306/mydb?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC";
+	private static final String DB_USER = "root";
+	private static final String DB_PASS = "Emre13901390.";
+	private Connection dbConnection;
+	private String playerName;
     // Oyun alanı (kaç satır ve sütun olacak)
     private static final int GRID_SIZE = 10;
 
@@ -158,14 +172,43 @@ public class Main extends Application {
     // Skor değişkeni ve ekranda gözüken skor etiketi
     private int score = 0;
     private Label scoreLabel;
-
+    
+    private void saveResult(Connection con, String user, int sc) throws SQLException {
+        String sql = "INSERT INTO game_results(username, score, played_at) VALUES (?, ?, ?)";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, user);
+            ps.setInt(2, sc);
+            ps.setObject(3, java.sql.Timestamp.valueOf(LocalDateTime.now()));
+            ps.executeUpdate();
+        }
+    }
     /**
      * JavaFX uygulamasının başlangıç fonksiyonu.
      * Ekranda panel, oyun alanı, envanter ve skor etiketi burada oluşturuluyor.
      */
     @Override
     public void start(Stage primaryStage) {
-        // Ana paneli oluştur, arka planı Block Blast'a yakın bir gradient ile ayarla
+    	// 1) Oyuncu adını al
+    	TextInputDialog dialog = new TextInputDialog();
+    	dialog.setTitle("Oyuncu Adı");
+    	dialog.setHeaderText("Lütfen adınızı girin:");
+    	Optional<String> result = dialog.showAndWait();
+    	if (result.isEmpty() || result.get().trim().isEmpty()) {
+    	    Platform.exit();
+    	    return;
+    	}
+    	playerName = result.get().trim();
+
+    	// 2) MySQL bağlantısı aç
+    	try {
+    	    Class.forName("com.mysql.cj.jdbc.Driver");
+    	    dbConnection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+    	} catch (Exception ex) {
+    	    ex.printStackTrace();
+    	    Platform.exit();
+    	    return;
+    	}
+    	// Ana paneli oluştur, arka planı Block Blast'a yakın bir gradient ile ayarla
     	primaryStage.setResizable(false);
     	root = new Pane();
         root.setStyle("-fx-background-color: linear-gradient(to bottom, #5c73bc, #5763ad 80%, #485090 100%);");
@@ -519,5 +562,14 @@ public class Main extends Application {
      */
     public static void main(String[] args) {
         launch(args);
+    }
+    @Override
+    public void stop() {
+        try {
+            saveResult(dbConnection, playerName, score);
+            dbConnection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
