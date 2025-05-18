@@ -71,6 +71,7 @@ public class ShapeDragManager {
         }
         draggingShapeIdx = -1;
         draggingUI = null;
+        
     }
 
     private void hoverPreview(double sceneX, double sceneY) {

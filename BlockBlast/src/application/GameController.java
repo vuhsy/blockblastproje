@@ -131,9 +131,12 @@ public class GameController {
 
     private void rebuildInventory() {
         inventoryObj.rebuild((idx, ui) -> {
-            ui.setOnMousePressed(e -> dragManager.handleMousePressed(e, idx, ui));
-            ui.setOnMouseDragged(dragManager::handleMouseDragged);
-            ui.setOnMouseReleased(dragManager::handleMouseReleased);
+        	 ui.setOnMousePressed(e -> dragManager.handleMousePressed(e, idx, ui));
+             ui.setOnMouseDragged(dragManager::handleMouseDragged);
+             ui.setOnMouseReleased(e -> {
+                 dragManager.handleMouseReleased(e);
+                 rebuildInventory(); // blok koyulsa da koyulmasa da inventoryi rebuild edecek
+             });
         });
     }
 
