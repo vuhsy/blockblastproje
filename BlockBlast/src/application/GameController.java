@@ -7,37 +7,38 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
-import javafx.scene.paint.Color;
 import java.util.Optional;
 import java.util.Random;
 
 public class GameController {
-    private final Stage stage;
-    private final Pane root;
-    private final Pane gridPane;
-    private final Inventory inventoryObj;
-    private final ShapeDragManager dragManager;
-    private final ScoreManager scoreManager;
-    private final GameBoard gameBoard;
-    private final DatabaseManager dbManager;
+    private Stage stage;
+    private Pane root;
+    private Pane gridPane;
+    private Inventory inventoryObj;
+    private ShapeDragManager dragManager;
+    private ScoreManager scoreManager;
+    private GameBoard gameBoard;
+    private DatabaseManager dbManager;
 
-    private final int GRID_SIZE = 8;
-    private final int CELL_SIZE = 60;
+    private int GRID_SIZE = 10;
+    private final int MIN_GRID_SIZE = 7;
+    private int CELL_SIZE = 60;
+    private final int MAX_CELL_SIZE = 75;
     private final Point2D GRID_OFFSET = new Point2D(10, 60);
 
+    private int nextThresholdScore = 3000; 
     private String playerName;
     private int pointsPerBlock = 10;
     private int pointsPerLine = 500;
     private Random rnd = new Random();
 
-    //  MySQL bilgilerini Main'den parametreyle alıyoruz 
     public GameController(Stage stage, String dbUrl, String dbUser, String dbPass) {
         this.stage = stage;
         root = new Pane();
         root.setStyle("-fx-background-color: linear-gradient(to bottom, #5c73bc, #5763ad 80%, #485090 100%);");
         root.setPrefSize(GRID_SIZE * CELL_SIZE + 20, GRID_SIZE * CELL_SIZE + CELL_SIZE * 2 + 70);
 
-        // Skor etiketleri
+        // Skor etiketi
         Label scoreLabel = new Label("0");
         scoreLabel.setStyle("-fx-font-size: 36px; -fx-font-family: 'Arial Rounded MT Bold', Arial, sans-serif; -fx-text-fill: #0a061a; -fx-background-color: transparent; -fx-padding: 0;");
         double labelWidth = 120;
@@ -47,6 +48,7 @@ public class GameController {
         scoreLabel.setAlignment(javafx.geometry.Pos.CENTER);
         root.getChildren().add(scoreLabel);
 
+        // Highscore etiketi
         Label highScoreLabel = new Label();
         highScoreLabel.setStyle("-fx-font-size: 18px; -fx-font-family: Arial; -fx-text-fill: #444; -fx-background-color: transparent;");
         highScoreLabel.setLayoutX(10);
@@ -62,7 +64,6 @@ public class GameController {
         gridPane.setStyle("-fx-background-color: #2d355e; -fx-border-radius: 10; -fx-background-radius: 10;");
         root.getChildren().add(gridPane);
 
-        // GameBoard ve ScoreManager
         gameBoard = new GameBoard(GRID_SIZE, CELL_SIZE, gridPane);
         scoreManager = new ScoreManager(scoreLabel, highScoreLabel);
 
@@ -75,13 +76,10 @@ public class GameController {
         inventoryObj.getBox().setLayoutY(invY);
         root.getChildren().add(inventoryObj.getBox());
 
-        // Drag manager
         dragManager = new ShapeDragManager(
             root, GRID_SIZE, CELL_SIZE, GRID_OFFSET,
             gameBoard.getBoard(), gameBoard.getCellRects(), inventoryObj
         );
-
-       
         dbManager = new DatabaseManager(dbUrl, dbUser, dbPass);
 
         dragManager.setPlaceCallback((shapeIdx, row, col) -> {
@@ -91,6 +89,7 @@ public class GameController {
             inventoryObj.setNull(shapeIdx);
             if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
             rebuildInventory();
+            checkDifficultyAndShrink();
             if (!canPlaceAnyShape()) showGameOverPanel();
         });
     }
@@ -131,12 +130,12 @@ public class GameController {
 
     private void rebuildInventory() {
         inventoryObj.rebuild((idx, ui) -> {
-        	 ui.setOnMousePressed(e -> dragManager.handleMousePressed(e, idx, ui));
-             ui.setOnMouseDragged(dragManager::handleMouseDragged);
-             ui.setOnMouseReleased(e -> {
-                 dragManager.handleMouseReleased(e);
-                 rebuildInventory(); // blok koyulsa da koyulmasa da inventoryi rebuild edecek
-             });
+            ui.setOnMousePressed(e -> dragManager.handleMousePressed(e, idx, ui));
+            ui.setOnMouseDragged(dragManager::handleMouseDragged);
+            ui.setOnMouseReleased(e -> {
+                dragManager.handleMouseReleased(e);
+                rebuildInventory(); // bırakınca her durumda inventory güncelleniyor
+            });
         });
     }
 
@@ -154,6 +153,68 @@ public class GameController {
         return false;
     }
 
+    
+    private void checkDifficultyAndShrink() {
+        while (scoreManager.getScore() >= nextThresholdScore) {
+            if (GRID_SIZE > MIN_GRID_SIZE) {
+                GRID_SIZE--;
+            }
+            if (CELL_SIZE < MAX_CELL_SIZE) {
+                CELL_SIZE += 5;
+                if (CELL_SIZE > MAX_CELL_SIZE) CELL_SIZE = MAX_CELL_SIZE;
+            }
+            nextThresholdScore += 3000;
+            shrinkGrid();
+            showDifficultyIncreaseMessage();
+        }
+    }
+
+    private void shrinkGrid() {
+        root.getChildren().remove(gameBoard.getGridPane());
+        Pane newGridPane = new Pane();
+        newGridPane.setLayoutX(GRID_OFFSET.getX());
+        newGridPane.setLayoutY(GRID_OFFSET.getY());
+        newGridPane.setPrefSize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+        newGridPane.setStyle("-fx-background-color: #2d355e; -fx-border-radius: 10; -fx-background-radius: 10;");
+        root.getChildren().add(newGridPane);
+
+        gameBoard = new GameBoard(GRID_SIZE, CELL_SIZE, newGridPane);
+
+        // dragManager'ı yeniden oluşturmak gerekir!
+        dragManager = new ShapeDragManager(
+            root, GRID_SIZE, CELL_SIZE, GRID_OFFSET,
+            gameBoard.getBoard(), gameBoard.getCellRects(), inventoryObj
+        );
+        dragManager.setPlaceCallback((shapeIdx, row, col) -> {
+            gameBoard.placeShape(inventoryObj.getShape(shapeIdx), inventoryObj.getColor(shapeIdx), row, col);
+            scoreManager.add(pointsPerBlock * inventoryObj.getShape(shapeIdx).length);
+            gameBoard.clearFullLines(pointsPerLine, scoreManager);
+            inventoryObj.setNull(shapeIdx);
+            if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
+            rebuildInventory();
+            checkDifficultyAndShrink();
+            if (!canPlaceAnyShape()) showGameOverPanel();
+        });
+
+        // Inventory UI konumu güncelle
+        inventoryObj.getBox().setLayoutY(GRID_OFFSET.getY() + GRID_SIZE * CELL_SIZE + 10);
+    }
+
+    private void showDifficultyIncreaseMessage() {
+        Label msg = new Label("Zorluk Arttı!");
+        msg.setStyle("-fx-font-size: 34px; -fx-font-family: Arial Rounded MT Bold; -fx-text-fill: #FF5722; "
+                + "-fx-background-color: rgba(255,255,255,0.8); -fx-padding: 20px 30px 20px 30px; -fx-border-radius: 18; -fx-background-radius: 18;");
+        msg.setLayoutX((root.getWidth() - 250) / 2);
+        msg.setLayoutY(60);
+
+        root.getChildren().add(msg);
+
+        new Thread(() -> {
+            try { Thread.sleep(1000); } catch (InterruptedException e) {}
+            javafx.application.Platform.runLater(() -> root.getChildren().remove(msg));
+        }).start();
+    }
+
     private void showGameOverPanel() {
         Pane panel = new Pane();
         panel.setStyle("-fx-background-color: rgba(255,255,255,0.97); -fx-border-radius: 18; -fx-background-radius: 18; -fx-border-color: #aaaaff; -fx-border-width: 3;");
@@ -169,7 +230,6 @@ public class GameController {
         skor.setStyle("-fx-font-size: 28px; -fx-font-family: Arial; -fx-text-fill: #222;");
         skor.setLayoutX(135); skor.setLayoutY(90);
 
-        // Skorları çek ve tabloya ekle
         dbManager.saveScore(playerName, scoreManager.getScore());
         String[][] scoreArray = dbManager.getAllPlayersHighScoresArray();
 
@@ -181,7 +241,7 @@ public class GameController {
         scoreTable.setLayoutX(60);
         scoreTable.setLayoutY(160);
         for (int i = 0; i < scoreArray.length; i++) {
-            if (scoreArray[i][0] == null) break; // boş ise devam etme
+            if (scoreArray[i][0] == null) break;
             Label l = new Label((i+1) + ". " + scoreArray[i][0] + " : " + scoreArray[i][1]);
             l.setStyle("-fx-font-size: 15px; -fx-font-family: Arial; -fx-text-fill: #222;");
             l.setLayoutX(10);
@@ -202,8 +262,10 @@ public class GameController {
         root.getChildren().add(panel);
     }
 
-
     private void resetGame() {
+        GRID_SIZE = 10;
+        CELL_SIZE = 60;
+        nextThresholdScore = 3000;
         gameBoard.reset();
         scoreManager.reset();
         inventoryObj.generateNewSet(rnd);

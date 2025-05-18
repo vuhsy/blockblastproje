@@ -99,7 +99,11 @@ public class GameBoard {
         return board;
     }
 
-    public Rectangle[][] getCellRects() {
+    public Pane getGridPane() {
+		return gridPane;
+	}
+
+	public Rectangle[][] getCellRects() {
         return cellRects;
     }
 }
