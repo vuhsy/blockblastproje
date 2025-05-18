@@ -15,7 +15,9 @@ public class ShapeDragManager {
     private Rectangle[][] cellRects;
     private Inventory inventory;
 
-    private Point2D dragOffset;
+    // --- YENİ: Mouse ile hangi shape hücresinin tutulduğunu saklar
+    private Point2D shapeOffset = new Point2D(0, 0);
+
     private int draggingShapeIdx = -1;
     private Pane draggingUI;
     private Rectangle[] previewGhost = new Rectangle[16];
@@ -41,27 +43,64 @@ public class ShapeDragManager {
         this.callback = cb;
     }
 
+    // --- Drag başlatıldığında ---
     public void handleMousePressed(MouseEvent e, int shapeIdx, Pane ui) {
         draggingShapeIdx = shapeIdx;
         draggingUI = ui;
-        dragOffset = new Point2D(e.getSceneX() - ui.getLayoutX(), e.getSceneY() - ui.getLayoutY());
+
+        Point2D[] points = inventory.getShape(shapeIdx);
+        if (points == null || points.length == 0) {
+            shapeOffset = new Point2D(0, 0);
+            return;
+        }
+
+        // UI içindeki mouse pozisyonunu grid bloğu olarak bul
+        // Önce shape'in min/max X/Y'sini bul
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+        for (Point2D pt : points) {
+            int x = (int) pt.getX();
+            int y = (int) pt.getY();
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+        }
+        // UI, 2*cellSize'lık kare. Tıklanan yerden hangi grid bloğuna denk geldiğini bul:
+        double xInShape = e.getX();
+        double yInShape = e.getY();
+        int colInShape = (int) ((xInShape * points.length) / (cellSize * 2));
+        int rowInShape = (int) ((yInShape * points.length) / (cellSize * 2));
+
+        // En yakın shape grid noktasını bul
+        int closestIdx = 0;
+        double minDist = Double.MAX_VALUE;
+        for (int i = 0; i < points.length; i++) {
+            // Blokun envanter UI'sindeki gerçek pozisyonu:
+            double px = (points[i].getX() - minX + 0.5) * cellSize * 2 / points.length;
+            double py = (points[i].getY() - minY + 0.5) * cellSize * 2 / points.length;
+            double dist = Math.pow(xInShape - px, 2) + Math.pow(yInShape - py, 2);
+            if (dist < minDist) {
+                minDist = dist;
+                closestIdx = i;
+            }
+        }
+        // shapeOffset artık tıklanan grid bloğunun shape içindeki indexi
+        shapeOffset = new Point2D(points[closestIdx].getX(), points[closestIdx].getY());
+
         hoverPreview(e.getSceneX(), e.getSceneY());
     }
 
+    // --- Sürüklenirken ---
     public void handleMouseDragged(MouseEvent e) {
-        if (draggingUI != null) {
-            draggingUI.setLayoutX(e.getSceneX() - dragOffset.getX());
-            draggingUI.setLayoutY(e.getSceneY() - dragOffset.getY());
-            hoverPreview(e.getSceneX(), e.getSceneY());
-        }
+        hoverPreview(e.getSceneX(), e.getSceneY());
     }
 
+    // --- Drag bırakıldığında ---
     public void handleMouseReleased(MouseEvent e) {
         clearPreview();
+
         double x = e.getSceneX() - gridOffset.getX();
         double y = e.getSceneY() - gridOffset.getY();
-        int col = (int) (x / cellSize);
-        int row = (int) (y / cellSize);
+        int col = (int) (x / cellSize) - (int) shapeOffset.getX();
+        int row = (int) (y / cellSize) - (int) shapeOffset.getY();
 
         if (draggingShapeIdx != -1) {
             Point2D[] shape = inventory.getShape(draggingShapeIdx);
@@ -71,9 +110,9 @@ public class ShapeDragManager {
         }
         draggingShapeIdx = -1;
         draggingUI = null;
-        
     }
 
+    // --- Hover/önizleme fonksiyonu ---
     private void hoverPreview(double sceneX, double sceneY) {
         clearPreview();
         if (draggingShapeIdx == -1) return;
@@ -83,8 +122,8 @@ public class ShapeDragManager {
 
         double x = sceneX - gridOffset.getX();
         double y = sceneY - gridOffset.getY();
-        int col = (int) (x / cellSize);
-        int row = (int) (y / cellSize);
+        int col = (int) (x / cellSize) - (int) shapeOffset.getX();
+        int row = (int) (y / cellSize) - (int) shapeOffset.getY();
 
         previewGhostCount = 0;
         for (Point2D p : points) {
