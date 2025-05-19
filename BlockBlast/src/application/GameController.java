@@ -129,14 +129,17 @@ public class GameController {
     }
 
     private void rebuildInventory() {
-        inventoryObj.rebuild((idx, ui) -> {
-            ui.setOnMousePressed(e -> dragManager.handleMousePressed(e, idx, ui));
-            ui.setOnMouseDragged(dragManager::handleMouseDragged);
-            ui.setOnMouseReleased(e -> {
-                dragManager.handleMouseReleased(e);
-                rebuildInventory(); // bırakınca her durumda inventory güncelleniyor
-            });
-        });
+    	inventoryObj.rebuild((idx, ui) -> {
+    	    ui.setOnMousePressed(e -> {
+    	        dragManager.handleMousePressed(e, idx, ui);
+    	    });
+    	    ui.setOnMouseDragged(dragManager::handleMouseDragged);
+    	    ui.setOnMouseReleased(e -> {
+    	        dragManager.handleMouseReleased(e);
+    	        rebuildInventory();
+    	    });
+    	});
+
     }
 
     private boolean canPlaceAnyShape() {
@@ -164,6 +167,7 @@ public class GameController {
                 if (CELL_SIZE > MAX_CELL_SIZE) CELL_SIZE = MAX_CELL_SIZE;
             }
             nextThresholdScore += 3000;
+            SoundPlayer.play("/sounds/levelup.wav");
             shrinkGrid();
             showDifficultyIncreaseMessage();
         }
@@ -188,13 +192,13 @@ public class GameController {
         dragManager.setPlaceCallback((shapeIdx, row, col) -> {
             gameBoard.placeShape(inventoryObj.getShape(shapeIdx), inventoryObj.getColor(shapeIdx), row, col);
             scoreManager.add(pointsPerBlock * inventoryObj.getShape(shapeIdx).length);
-            gameBoard.clearFullLines(pointsPerLine, scoreManager);
             inventoryObj.setNull(shapeIdx);
             if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
             rebuildInventory();
             checkDifficultyAndShrink();
             if (!canPlaceAnyShape()) showGameOverPanel();
         });
+
 
         // Inventory UI konumu güncelle
         inventoryObj.getBox().setLayoutY(GRID_OFFSET.getY() + GRID_SIZE * CELL_SIZE + 10);

@@ -53,6 +53,7 @@ public class GameBoard {
             board[r][c] = color;
             cellRects[r][c].setFill(color);
         }
+        SoundPlayer.play("/sounds/place.wav");
     }
 
     public int clearFullLines(int pointsPerLine, ScoreManager scoreManager) {
@@ -83,8 +84,13 @@ public class GameBoard {
         }
         // Skor ekle
         scoreManager.add(pointsPerLine * cleared);
+        // Sadece burada ses çal!
+        if (cleared > 0) {
+            SoundPlayer.play("/sounds/clear.wav");
+        }
         return cleared;
     }
+
 
     public boolean canPlace(Point2D[] shape, int baseRow, int baseCol) {
         for (Point2D p : shape) {

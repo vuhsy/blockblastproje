@@ -86,6 +86,7 @@ public class ShapeDragManager {
         shapeOffset = new Point2D(points[closestIdx].getX(), points[closestIdx].getY());
 
         hoverPreview(e.getSceneX(), e.getSceneY());
+        SoundPlayer.play("/sounds/pickup.wav");
     }
 
     // --- Sürüklenirken ---
