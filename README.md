@@ -7,6 +7,10 @@ YAPILACAKLAR:
 
 3-Blok patlama animasyonları,ses efektleri ve combo sistemi.
 
+VM ARGUMENTS:
+
+     --module-path "JAVAFX/LİB" --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.media
+javafx.media yı eklemeyi unutmayın
 
 KODUN ÇALIŞMASI İÇİN MYSQL BAĞLANTISI:
 
