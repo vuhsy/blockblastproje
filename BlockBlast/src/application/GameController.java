@@ -288,12 +288,51 @@ public class GameController {
     }
 
     private void resetGame() {
+        // 1) Temel değerleri sıfırla
         GRID_SIZE = 10;
         CELL_SIZE = 60;
         nextThresholdScore = 3000;
-        gameBoard.reset();
+
+        // 2) Eski gridPanei kaldır
+        root.getChildren().remove(gameBoard.getGridPane());
+
+        // 3) Yeni gridPane oluştur ve ekle
+        Pane newGridPane = new Pane();
+        newGridPane.setLayoutX(GRID_OFFSET.getX());
+        newGridPane.setLayoutY(GRID_OFFSET.getY());
+        newGridPane.setPrefSize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+        newGridPane.setStyle("-fx-background-color: #2d355e; -fx-border-radius: 10; -fx-background-radius: 10;");
+        root.getChildren().add(newGridPane);
+
+        // 4) GameBoardu yeniden oluştur
+        gameBoard = new GameBoard(GRID_SIZE, CELL_SIZE, newGridPane);
+
+        // 5) Drag managerı güncelle 
+        dragManager = new ShapeDragManager(
+            root, GRID_SIZE, CELL_SIZE, GRID_OFFSET,
+            gameBoard.getBoard(), gameBoard.getCellRects(), inventoryObj
+        );
+        dragManager.setPlaceCallback((shapeIdx, row, col) -> {
+            // aynısını başlangıçtakine yazabiliriz
+            gameBoard.placeShape(inventoryObj.getShape(shapeIdx), inventoryObj.getColor(shapeIdx), row, col);
+            scoreManager.add(pointsPerBlock * inventoryObj.getShape(shapeIdx).length);
+            gameBoard.clearFullLines(pointsPerLine, scoreManager);
+            inventoryObj.setNull(shapeIdx);
+            if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
+            rebuildInventory();
+            checkDifficultyAndShrink();
+            if (!canPlaceAnyShape()) showGameOverPanel();
+        });
+
+        // 6) Skoru sıfırla
         scoreManager.reset();
+
+        // 7) Envanteri yeni set ile başlat ve çiz
         inventoryObj.generateNewSet(rnd);
         rebuildInventory();
+
+        // 8) Inventory panelini doğru konuma getir
+        inventoryObj.getBox().setLayoutY(GRID_OFFSET.getY() + GRID_SIZE * CELL_SIZE + 10);
     }
+
 }
