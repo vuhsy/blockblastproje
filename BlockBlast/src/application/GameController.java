@@ -6,6 +6,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import java.util.Optional;
 import java.util.Random;
@@ -174,6 +176,9 @@ public class GameController {
     }
 
     private void shrinkGrid() {
+        Color[][] oldBoard = gameBoard.getBoard();
+        int oldGridSize = oldBoard.length;
+
         root.getChildren().remove(gameBoard.getGridPane());
         Pane newGridPane = new Pane();
         newGridPane.setLayoutX(GRID_OFFSET.getX());
@@ -184,14 +189,28 @@ public class GameController {
 
         gameBoard = new GameBoard(GRID_SIZE, CELL_SIZE, newGridPane);
 
-        // dragManager'ı yeniden oluşturmak gerekir!
+        Color[][] newBoard = gameBoard.getBoard();
+        Rectangle[][] newRects = gameBoard.getCellRects();
+        for (int r = 0; r < GRID_SIZE; r++) {
+            for (int c = 0; c < GRID_SIZE; c++) {
+                if (r < oldGridSize && c < oldGridSize && oldBoard[r][c] != null) {
+                    newBoard[r][c] = oldBoard[r][c];
+                    newRects[r][c].setFill(oldBoard[r][c]);
+                } else {
+                    newBoard[r][c] = null;
+                    newRects[r][c].setFill(Color.web("#232a4d"));
+                }
+            }
+        }
+
         dragManager = new ShapeDragManager(
             root, GRID_SIZE, CELL_SIZE, GRID_OFFSET,
-            gameBoard.getBoard(), gameBoard.getCellRects(), inventoryObj
+            newBoard, newRects, inventoryObj
         );
         dragManager.setPlaceCallback((shapeIdx, row, col) -> {
             gameBoard.placeShape(inventoryObj.getShape(shapeIdx), inventoryObj.getColor(shapeIdx), row, col);
             scoreManager.add(pointsPerBlock * inventoryObj.getShape(shapeIdx).length);
+            gameBoard.clearFullLines(pointsPerLine, scoreManager); // BU SATIR!
             inventoryObj.setNull(shapeIdx);
             if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
             rebuildInventory();
@@ -199,10 +218,10 @@ public class GameController {
             if (!canPlaceAnyShape()) showGameOverPanel();
         });
 
-
-        // Inventory UI konumu güncelle
         inventoryObj.getBox().setLayoutY(GRID_OFFSET.getY() + GRID_SIZE * CELL_SIZE + 10);
     }
+
+
 
     private void showDifficultyIncreaseMessage() {
         Label msg = new Label("Zorluk Arttı!");
