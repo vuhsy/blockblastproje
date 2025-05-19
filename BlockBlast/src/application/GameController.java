@@ -1,5 +1,6 @@
 package application;
 
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
@@ -9,6 +10,8 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+
 import java.util.Optional;
 import java.util.Random;
 
@@ -232,10 +235,9 @@ public class GameController {
 
         root.getChildren().add(msg);
 
-        new Thread(() -> {
-            try { Thread.sleep(1000); } catch (InterruptedException e) {}
-            javafx.application.Platform.runLater(() -> root.getChildren().remove(msg));
-        }).start();
+        PauseTransition pause = new PauseTransition(Duration.millis(3000));
+        pause.setOnFinished(event -> root.getChildren().remove(msg));
+        pause.play();
     }
 
     private void showGameOverPanel() {
