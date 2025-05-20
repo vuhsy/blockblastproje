@@ -3,7 +3,7 @@ package application;
 import javafx.scene.control.Label;
 
 public class ScoreManager {
-    private int score = 2950;
+    private int score = 0;
     private int highScore = 0;
     private String highScoreOwner = "-";
     private final Label scoreLabel;
