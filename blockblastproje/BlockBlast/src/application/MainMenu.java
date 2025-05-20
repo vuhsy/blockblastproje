@@ -119,11 +119,9 @@ public class MainMenu {
         btnHard.prefHeightProperty().bind(stage.heightProperty().multiply(0.08));
         btnBack.prefHeightProperty().bind(stage.heightProperty().multiply(0.06));
 
-        btnEasy.setOnAction(e -> {
-            // TODO: Kolay mod mantığını buraya ekle
-        });
+        btnEasy.setOnAction(e -> new GameController_easyMode(stage, dbUrl, dbUser, dbPass).startGame());
 
-        btnHard.setOnAction(e -> new GameController(stage, dbUrl, dbUser, dbPass).startGame());
+        btnHard.setOnAction(e -> new GameController_hardMode(stage, dbUrl, dbUser, dbPass).startGame());
         btnBack.setOnAction(e -> pop());
 
         VBox box = new VBox(15, btnEasy, btnHard);
@@ -159,9 +157,9 @@ public class MainMenu {
         btn2m .prefHeightProperty().bind(stage.heightProperty().multiply(0.08));
         btnBack.prefHeightProperty().bind(stage.heightProperty().multiply(0.06));
 
-        btn30s.setOnAction(e -> {/* TODO: start timed 30s */});
-        btn1m.setOnAction(e -> {/* TODO: start timed 1m */});
-        btn2m.setOnAction(e -> {/* TODO: start timed 2m */});
+        btn30s.setOnAction(e -> new Game30Sec(stage, 30, dbUrl, dbUser, dbPass ));
+        btn1m.setOnAction(e -> new Game1Min(stage, 60, dbUrl, dbUser, dbPass));
+        btn2m.setOnAction(e -> new Game2Min(stage, 120, dbUrl, dbUser, dbPass));
         btnBack.setOnAction(e -> pop());
 
         VBox box = new VBox(15, btn30s, btn1m, btn2m);
