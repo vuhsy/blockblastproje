@@ -94,7 +94,7 @@ public class GameController_hardMode {
             inventoryObj.setNull(shapeIdx);
             if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
             rebuildInventory();
-//            checkDifficultyAndShrink();
+            checkDifficultyAndShrink();
             if (!canPlaceAnyShape()) showGameOverPanel();
         });
     }
@@ -162,83 +162,83 @@ public class GameController_hardMode {
     }
 
     
-//    private void checkDifficultyAndShrink() {
-//        while (scoreManager.getScore() >= nextThresholdScore) {
-//            if (GRID_SIZE > MIN_GRID_SIZE) {
-//                GRID_SIZE--;
-//            }
-//            if (CELL_SIZE < MAX_CELL_SIZE) {
-//                CELL_SIZE += 5;
-//                if (CELL_SIZE > MAX_CELL_SIZE) CELL_SIZE = MAX_CELL_SIZE;
-//            }
-//            nextThresholdScore += 3000;
-//            SoundPlayer.play("/sounds/levelup.wav");
-//            shrinkGrid();
-//            showDifficultyIncreaseMessage();
-//        }
-//    }
+    private void checkDifficultyAndShrink() {
+       while (scoreManager.getScore() >= nextThresholdScore) {
+           if (GRID_SIZE > MIN_GRID_SIZE) {
+                GRID_SIZE--;
+            }
+            if (CELL_SIZE < MAX_CELL_SIZE) {
+                CELL_SIZE += 5;
+                if (CELL_SIZE > MAX_CELL_SIZE) CELL_SIZE = MAX_CELL_SIZE;
+            }
+            nextThresholdScore += 3000;
+            SoundPlayer.play("/sounds/levelup.wav");
+            shrinkGrid();
+            showDifficultyIncreaseMessage();
+        }
+    }
 
-//    private void shrinkGrid() {
-//        Color[][] oldBoard = gameBoard.getBoard();
-//        int oldGridSize = oldBoard.length;
-//
-//        root.getChildren().remove(gameBoard.getGridPane());
-//        Pane newGridPane = new Pane();
-//        newGridPane.setLayoutX(GRID_OFFSET.getX());
-//        newGridPane.setLayoutY(GRID_OFFSET.getY());
-//        newGridPane.setPrefSize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
-//        newGridPane.setStyle("-fx-background-color: #2d355e; -fx-border-radius: 10; -fx-background-radius: 10;");
-//        root.getChildren().add(newGridPane);
-//
-//        gameBoard = new GameBoard(GRID_SIZE, CELL_SIZE, newGridPane);
-//
-//        Color[][] newBoard = gameBoard.getBoard();
-//        Rectangle[][] newRects = gameBoard.getCellRects();
-//        for (int r = 0; r < GRID_SIZE; r++) {
-//            for (int c = 0; c < GRID_SIZE; c++) {
-//                if (r < oldGridSize && c < oldGridSize && oldBoard[r][c] != null) {
-//                    newBoard[r][c] = oldBoard[r][c];
-//                    newRects[r][c].setFill(oldBoard[r][c]);
-//                } else {
-//                    newBoard[r][c] = null;
-//                    newRects[r][c].setFill(Color.web("#232a4d"));
-//                }
-//            }
-//        }
-//
-//        dragManager = new ShapeDragManager(
-//            root, GRID_SIZE, CELL_SIZE, GRID_OFFSET,
-//            newBoard, newRects, inventoryObj
-//        );
-//        dragManager.setPlaceCallback((shapeIdx, row, col) -> {
-//            gameBoard.placeShape(inventoryObj.getShape(shapeIdx), inventoryObj.getColor(shapeIdx), row, col);
-//            scoreManager.add(pointsPerBlock * inventoryObj.getShape(shapeIdx).length);
-//            gameBoard.clearFullLines(pointsPerLine, scoreManager); // BU SATIR!
-//            inventoryObj.setNull(shapeIdx);
-//            if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
-//            rebuildInventory();
-////            checkDifficultyAndShrink();
-//            if (!canPlaceAnyShape()) showGameOverPanel();
-//        });
-//
-//        inventoryObj.getBox().setLayoutY(GRID_OFFSET.getY() + GRID_SIZE * CELL_SIZE + 10);
-//    }
+    private void shrinkGrid() {
+        Color[][] oldBoard = gameBoard.getBoard();
+        int oldGridSize = oldBoard.length;
+
+        root.getChildren().remove(gameBoard.getGridPane());
+        Pane newGridPane = new Pane();
+        newGridPane.setLayoutX(GRID_OFFSET.getX());
+        newGridPane.setLayoutY(GRID_OFFSET.getY());
+        newGridPane.setPrefSize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+        newGridPane.setStyle("-fx-background-color: #2d355e; -fx-border-radius: 10; -fx-background-radius: 10;");
+        root.getChildren().add(newGridPane);
+
+        gameBoard = new GameBoard(GRID_SIZE, CELL_SIZE, newGridPane);
+
+        Color[][] newBoard = gameBoard.getBoard();
+        Rectangle[][] newRects = gameBoard.getCellRects();
+        for (int r = 0; r < GRID_SIZE; r++) {
+            for (int c = 0; c < GRID_SIZE; c++) {
+                if (r < oldGridSize && c < oldGridSize && oldBoard[r][c] != null) {
+                    newBoard[r][c] = oldBoard[r][c];
+                    newRects[r][c].setFill(oldBoard[r][c]);
+                } else {
+                    newBoard[r][c] = null;
+                    newRects[r][c].setFill(Color.web("#232a4d"));
+                }
+            }
+        }
+
+        dragManager = new ShapeDragManager(
+            root, GRID_SIZE, CELL_SIZE, GRID_OFFSET,
+            newBoard, newRects, inventoryObj
+        );
+        dragManager.setPlaceCallback((shapeIdx, row, col) -> {
+            gameBoard.placeShape(inventoryObj.getShape(shapeIdx), inventoryObj.getColor(shapeIdx), row, col);
+            scoreManager.add(pointsPerBlock * inventoryObj.getShape(shapeIdx).length);
+            gameBoard.clearFullLines(pointsPerLine, scoreManager); // BU SATIR!
+            inventoryObj.setNull(shapeIdx);
+            if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
+            rebuildInventory();
+            checkDifficultyAndShrink();
+            if (!canPlaceAnyShape()) showGameOverPanel();
+        });
+
+        inventoryObj.getBox().setLayoutY(GRID_OFFSET.getY() + GRID_SIZE * CELL_SIZE + 10);
+    }
 
 
 
-//    private void showDifficultyIncreaseMessage() {
-//        Label msg = new Label("Zorluk Arttı!");
-//        msg.setStyle("-fx-font-size: 34px; -fx-font-family: Arial Rounded MT Bold; -fx-text-fill: #FF5722; "
-//                + "-fx-background-color: rgba(255,255,255,0.8); -fx-padding: 20px 30px 20px 30px; -fx-border-radius: 18; -fx-background-radius: 18;");
-//        msg.setLayoutX((root.getWidth() - 250) / 2);
-//        msg.setLayoutY(60);
-//
-//        root.getChildren().add(msg);
-//
-//        PauseTransition pause = new PauseTransition(Duration.millis(3000));
-//        pause.setOnFinished(event -> root.getChildren().remove(msg));
-//        pause.play();
-//    }
+    private void showDifficultyIncreaseMessage() {
+        Label msg = new Label("Zorluk Arttı!");
+        msg.setStyle("-fx-font-size: 34px; -fx-font-family: Arial Rounded MT Bold; -fx-text-fill: #FF5722; "
+                + "-fx-background-color: rgba(255,255,255,0.8); -fx-padding: 20px 30px 20px 30px; -fx-border-radius: 18; -fx-background-radius: 18;");
+        msg.setLayoutX((root.getWidth() - 250) / 2);
+        msg.setLayoutY(60);
+
+        root.getChildren().add(msg);
+
+        PauseTransition pause = new PauseTransition(Duration.millis(3000));
+        pause.setOnFinished(event -> root.getChildren().remove(msg));
+        pause.play();
+    }
 
     private void showGameOverPanel() {
         Pane panel = new Pane();
@@ -320,7 +320,7 @@ public class GameController_hardMode {
             inventoryObj.setNull(shapeIdx);
             if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
             rebuildInventory();
-//            checkDifficultyAndShrink();
+            checkDifficultyAndShrink();
             if (!canPlaceAnyShape()) showGameOverPanel();
         });
 

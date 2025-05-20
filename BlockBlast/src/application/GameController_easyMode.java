@@ -94,7 +94,7 @@ public class GameController_easyMode {
             inventoryObj.setNull(shapeIdx);
             if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
             rebuildInventory();
-            checkDifficultyAndShrink();
+//         checkDifficultyAndShrink();
             if (!canPlaceAnyShape()) showGameOverPanel();
         });
     }
@@ -162,7 +162,7 @@ public class GameController_easyMode {
     }
 
     
-    private void checkDifficultyAndShrink() {
+  /*  private void checkDifficultyAndShrink() {
         while (scoreManager.getScore() >= nextThresholdScore) {
             if (GRID_SIZE > MIN_GRID_SIZE) {
                 GRID_SIZE--;
@@ -239,7 +239,7 @@ public class GameController_easyMode {
         pause.setOnFinished(event -> root.getChildren().remove(msg));
         pause.play();
     }
-
+*/
     private void showGameOverPanel() {
         Pane panel = new Pane();
         panel.setStyle("-fx-background-color: rgba(255,255,255,0.97); -fx-border-radius: 18; -fx-background-radius: 18; -fx-border-color: #aaaaff; -fx-border-width: 3;");
@@ -320,7 +320,7 @@ public class GameController_easyMode {
             inventoryObj.setNull(shapeIdx);
             if (inventoryObj.allUsed()) inventoryObj.generateNewSet(rnd);
             rebuildInventory();
-            checkDifficultyAndShrink();
+    //        checkDifficultyAndShrink();
             if (!canPlaceAnyShape()) showGameOverPanel();
         });
 
