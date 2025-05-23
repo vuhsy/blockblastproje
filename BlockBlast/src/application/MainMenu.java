@@ -28,79 +28,121 @@ public class MainMenu {
         this.dbPass = dbPass;
     }
 
-    public void showMainMenu() {
-    	
-    	
-        // 1) Logo’yı doğru path ile yükle
-        Image logoImage = new Image(
-          getClass().getResourceAsStream("/blastrix_logo.png")
-        );
-        ImageView logoView = new ImageView(logoImage);
-        logoView.setPreserveRatio(true);
-        logoView.setFitWidth(300);
+        public void showMainMenu() {
+            // Logo yükleme
+            Image logoImage = new Image(getClass().getResourceAsStream("/blastrix_logo.png"));
+            ImageView logoView = new ImageView(logoImage);
+            logoView.setPreserveRatio(true);
+            logoView.setFitWidth(300);
+            VBox logoBox = new VBox(logoView);
+            logoBox.setAlignment(Pos.CENTER);
+            logoBox.setPadding(new Insets(20, 0, 0, 0));
 
-   	 VBox logoBox = new VBox(logoView);
-      logoBox.setAlignment(Pos.CENTER); // Üstten hizalanmış ve ortalanmış
-      logoBox.setPadding(new Insets(20, 0,0,0)); // Öğeler arası boşluk
+            // Butonlar: Devam Et kaldırıldı
+            Button btnNewGame = new Button("Yeni Oyun");
+            Button btnExit    = new Button("Çıkış");
 
-//    	 VBox root_Logo = new VBox();
-//         root_Logo.setAlignment(Pos.TOP_CENTER); // Üstten hizalanmış ve ortalanmış
-//         root_Logo.setSpacing(20); // Öğeler arası boşluk
-//
-//         // --- LOGO RESMİ EKLEME ---
-//         System.out.println(getClass().getResource("/blastrix_logo.png"));
-//         // Görseli kaynak klasöründen yükler (classpath)
-//         Image logoImage = new Image(getClass().getResourceAsStream("/blastrix_logo.png"));
-//
-//         // Resmi göstermek için ImageView kullanılır
-//         ImageView logoView = new ImageView(logoImage);
-//         logoView.setPreserveRatio(true); // En-boy oranını koru
-//         logoView.setFitWidth(400); // Görselin genişliği (isteğe göre değiştir)
-//
-//         // Logo'yu root paneline ekle
-//         root_Logo.getChildren().add(logoView);
-//    	
-    	// Butonlar
-        Button btnContinue = new Button("Devam Et");
-        Button btnNewGame  = new Button("Yeni Oyun");
-        Button btnExit     = new Button("Çıkış");
+            // Stil
+            String baseStyle = "-fx-text-fill: white; -fx-font-size: 18px; -fx-background-radius: 10;";
+            btnNewGame.setStyle(baseStyle + "-fx-background-color: #4caf50;");
+            btnExit   .setStyle(baseStyle + "-fx-background-color: #f44336;");
 
-        // Stil
-        String baseStyle = "-fx-text-fill: white; -fx-font-size: 18px; -fx-background-radius: 10;";
-        btnContinue.setStyle(baseStyle + "-fx-background-color: #ff7f50;");
-        btnNewGame .setStyle(baseStyle + "-fx-background-color: #4caf50;");
-        btnExit    .setStyle(baseStyle + "-fx-background-color: #f44336;");
+            // Boyut binding
+            btnNewGame.prefWidthProperty().bind(stage.widthProperty().multiply(0.5));
+            btnExit   .prefWidthProperty().bind(stage.widthProperty().multiply(0.5));
+            btnNewGame.prefHeightProperty().bind(stage.heightProperty().multiply(0.1));
+            btnExit   .prefHeightProperty().bind(stage.heightProperty().multiply(0.1));
 
-        // Boyut
-        btnContinue.prefWidthProperty().bind(stage.widthProperty().multiply(0.5));
-        btnNewGame .prefWidthProperty().bind(stage.widthProperty().multiply(0.5));
-        btnExit    .prefWidthProperty().bind(stage.widthProperty().multiply(0.5));
-        btnContinue.prefHeightProperty().bind(stage.heightProperty().multiply(0.1));
-        btnNewGame .prefHeightProperty().bind(stage.heightProperty().multiply(0.1));
-        btnExit    .prefHeightProperty().bind(stage.heightProperty().multiply(0.1));
+            // İşlemler
+            btnNewGame.setOnAction(e -> push(buildNewGameMenu()));
+            btnExit   .setOnAction(e -> Platform.exit());
 
-        // İşlemler
-        btnContinue.setOnAction(e -> {
-            // TODO: Devam logic
-        });
-        btnNewGame.setOnAction(e -> push(buildNewGameMenu()));
-        btnExit.setOnAction(e -> Platform.exit());
+            // Layout: butonlar arası mesafe arttırıldı ve yukarı taşındı
+            VBox menuBox = new VBox(30, btnNewGame, btnExit);
+            menuBox.setAlignment(Pos.TOP_CENTER);
+            menuBox.setPadding(new Insets(30, 20, 20, 20));
 
-        // Layout
-        VBox menuBox = new VBox(20, btnContinue, btnNewGame, btnExit);
-        menuBox.setAlignment(Pos.BOTTOM_CENTER);
-        menuBox.setPadding(new Insets(0, 20,50,20));
+            // Root ve scene
+            BorderPane root = new BorderPane();
+            root.setStyle("-fx-background-color: linear-gradient(to bottom, #2196f3, #21cbf3);");
+            root.setTop(logoBox);
+            root.setCenter(menuBox);
 
-        BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: linear-gradient(to bottom, #2196f3, #21cbf3);");
-        root.setTop(logoBox);
-        root.setCenter(menuBox);
-        Scene scene = new Scene(root, 800, 600);
-        stage.setScene(scene);
-        stage.setTitle("BlockBlast - Ana Menü");
-        stage.show();
-    }
+            Scene scene = new Scene(root, 800, 600);
+            stage.setScene(scene);
+            stage.setMaximized(true);
+            stage.setTitle("BlockBlast - Ana Menü");
+            stage.show();
+        }
     
+    	
+//    	
+//        // 1) Logo’yı doğru path ile yükle
+//        Image logoImage = new Image(
+//          getClass().getResourceAsStream("/blastrix_logo.png")
+//        );
+//        ImageView logoView = new ImageView(logoImage);
+//        logoView.setPreserveRatio(true);
+//        logoView.setFitWidth(300);
+//
+//   	 VBox logoBox = new VBox(logoView);
+//      logoBox.setAlignment(Pos.CENTER); // Üstten hizalanmış ve ortalanmış
+//      logoBox.setPadding(new Insets(20, 0,0,0)); // Öğeler arası boşluk
+//
+////    	 VBox root_Logo = new VBox();
+////         root_Logo.setAlignment(Pos.TOP_CENTER); // Üstten hizalanmış ve ortalanmış
+////         root_Logo.setSpacing(20); // Öğeler arası boşluk
+////
+////         // --- LOGO RESMİ EKLEME ---
+////         System.out.println(getClass().getResource("/blastrix_logo.png"));
+////         // Görseli kaynak klasöründen yükler (classpath)
+////         Image logoImage = new Image(getClass().getResourceAsStream("/blastrix_logo.png"));
+////
+////         // Resmi göstermek için ImageView kullanılır
+////         ImageView logoView = new ImageView(logoImage);
+////         logoView.setPreserveRatio(true); // En-boy oranını koru
+////         logoView.setFitWidth(400); // Görselin genişliği (isteğe göre değiştir)
+////
+////         // Logo'yu root paneline ekle
+////         root_Logo.getChildren().add(logoView);
+////    	
+//    	// Butonlar
+//        
+//        Button btnNewGame  = new Button("Yeni Oyun");
+//        Button btnExit     = new Button("Çıkış");
+//
+//        // Stil
+//        String baseStyle = "-fx-text-fill: white; -fx-font-size: 18px; -fx-background-radius: 10;";
+//        btnNewGame .setStyle(baseStyle + "-fx-background-color: #4caf50;");
+//        btnExit    .setStyle(baseStyle + "-fx-background-color: #f44336;");
+//
+//        // Boyut
+//        
+//        btnNewGame .prefWidthProperty().bind(stage.widthProperty().multiply(0.5));
+//        btnExit    .prefWidthProperty().bind(stage.widthProperty().multiply(0.5));
+//
+//        btnNewGame .prefHeightProperty().bind(stage.heightProperty().multiply(0.1));
+//        btnExit    .prefHeightProperty().bind(stage.heightProperty().multiply(0.1));
+//
+//        // İşlemler
+//        btnNewGame.setOnAction(e -> push(buildNewGameMenu()));
+//        btnExit.setOnAction(e -> Platform.exit());
+//
+//        // Layout
+//        VBox menuBox = new VBox(20, btnNewGame, btnExit);
+//        menuBox.setAlignment(Pos.BOTTOM_CENTER);
+//        menuBox.setPadding(new Insets(0, 20,50,20));
+//
+//        BorderPane root = new BorderPane();
+//        root.setStyle("-fx-background-color: linear-gradient(to bottom, #2196f3, #21cbf3);");
+//        root.setTop(logoBox);
+//        root.setCenter(menuBox);
+//        Scene scene = new Scene(root, 800, 600);
+//        stage.setScene(scene);
+//        stage.setTitle("BlockBlast - Ana Menü");
+//        stage.show();
+//    }
+//    
     
 //    public void showMainMenu() {
 //        // 1) Logo’yı doğru path ile yükle
@@ -173,7 +215,7 @@ public class MainMenu {
 
     private Scene buildNewGameMenu() {
         Button btnClassic = new Button("Classic Mode");
-        Button btnTimed   = new Button("Zamana Karşı");
+        Button btnTimed   = new Button("BlastRush Mode");
         Button btnBack    = new Button("← Geri");
 
         String baseStyle = "-fx-text-fill: white; -fx-font-size: 16px; -fx-background-radius: 8;";
