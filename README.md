@@ -1,11 +1,20 @@
 # blockblastproje
-YAPILACAKLAR:
 
-1-MySql ile skor ve high skor sistemi
+JAVAFX KURULUMU
 
-2-Giriş ve bitme ekranları oyun bittiğinde yeniden oyna butonu  en iyi skor ve güncel skorun yazması lazım
+https://gluonhq.com/products/javafx/ adresinden işletim sistemine uygun JavaFX SDK'yı indir.
 
-3-Blok patlama animasyonları,ses efektleri ve combo sistemi.
+ZIP dosyasını açıp C:\javafx-sdk-XX gibi kolay bir yere çıkar.
+
+JavaFX’i Classpath’e Ekle:
+
+Projeye sağ tıkla → Build Path > Configure Build Path
+
+Libraries > Add External JARs → javafx-sdk-21/lib klasöründeki tüm .jar dosyaları ekle.
+
+Run > Run Configurations > Arguments > VM Arguments bölümüne şunu yaz: 
+
+     --module-path "C:\javafx-sdk-21\lib" --add-modules javafx.controls,javafx.fxml
 
 
 KODUN ÇALIŞMASI İÇİN MYSQL BAĞLANTISI:
@@ -14,11 +23,11 @@ KODUN ÇALIŞMASI İÇİN MYSQL BAĞLANTISI:
 
 2 MySQL'e giriş yapın: mysql -u root -p
 
-3 mydb veritabanını oluşturun:
+3 blockblast veritabanını oluşturun:
 
-    CREATE DATABASE mydb;
+    CREATE DATABASE blockblast;
                               
-    USE mydb;
+    USE blockblast;
 4 Tabloyu oluşturun: 
 
                 CREATE TABLE IF NOT EXISTS game_results (  
