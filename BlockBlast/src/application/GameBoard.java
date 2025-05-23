@@ -53,7 +53,9 @@ public class GameBoard {
             board[r][c] = color;
             cellRects[r][c].setFill(color);
         }
-        SoundPlayer.play("/sounds/place.wav");
+        SoundEffectPlayer sfx = new SoundPlayer();
+        sfx.playSound("/sounds/clear.wav");
+
     }
 
     public int clearFullLines(int pointsPerLine, ScoreManager scoreManager) {
@@ -86,7 +88,9 @@ public class GameBoard {
         scoreManager.add(pointsPerLine * cleared);
         // Sadece burada ses çal!
         if (cleared > 0) {
-            SoundPlayer.play("/sounds/clear.wav");
+        	SoundEffectPlayer sfx = new SoundPlayer();
+        	sfx.playSound("/sounds/clear.wav");
+
         }
         return cleared;
     }

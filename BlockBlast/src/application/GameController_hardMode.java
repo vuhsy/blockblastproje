@@ -15,6 +15,16 @@ import javafx.util.Duration;
 import java.util.Optional;
 import java.util.Random;
 
+import javafx.util.Duration;
+import java.util.function.Consumer;
+import java.util.Optional;
+import java.util.Random;
+import application.MainMenu;
+import javafx.scene.control.Button;
+import javafx.geometry.Pos;
+import javafx.stage.Stage;
+
+
 public class GameController_hardMode {
     private Stage stage;
     private Pane root;
@@ -24,6 +34,10 @@ public class GameController_hardMode {
     private ScoreManager scoreManager;
     private GameBoard gameBoard;
     private DatabaseManager dbManager;
+    private final String dbUrl;
+    private final String dbUser;
+    private final String dbPass;
+
 
     private int GRID_SIZE = 10;
     private final int MIN_GRID_SIZE = 7;
@@ -39,6 +53,9 @@ public class GameController_hardMode {
 
     public GameController_hardMode(Stage stage, String dbUrl, String dbUser, String dbPass) {
         this.stage = stage;
+        this.dbUrl = dbUrl;
+        this.dbUser = dbUser;
+        this.dbPass = dbPass;
         root = new Pane();
         root.setStyle("-fx-background-color: linear-gradient(to bottom, #5c73bc, #5763ad 80%, #485090 100%);");
         root.setPrefSize(GRID_SIZE * CELL_SIZE + 20, GRID_SIZE * CELL_SIZE + CELL_SIZE * 2 + 70);
@@ -240,15 +257,17 @@ public class GameController_hardMode {
         pause.play();
     }
 
-    private void showGameOverPanel() {
+    
+    protected void showGameOverPanel() {
         Pane panel = new Pane();
-        panel.setStyle("-fx-background-color: rgba(255,255,255,0.97); -fx-border-radius: 18; -fx-background-radius: 18; -fx-border-color: #aaaaff; -fx-border-width: 3;");
+        panel.setStyle("-fx-background-color: rgba(255,255,255,0.97); -fx-border-radius: 18; "
+                     + "-fx-background-radius: 18; -fx-border-color: #aaaaff; -fx-border-width: 3;");
         panel.setPrefSize(400, 380);
         panel.setLayoutX((root.getWidth() - 400) / 2);
         panel.setLayoutY((root.getHeight() - 380) / 2);
 
         Label over = new Label("OYUN BİTTİ!");
-        over.setStyle("-fx-font-size: 38px; -fx-font-family: Arial Rounded MT Bold; -fx-text-fill: #5c73bc;");
+        over.setStyle("-fx-font-size: 38px; -fx-font-family: 'Arial Rounded MT Bold'; -fx-text-fill: #5c73bc;");
         over.setLayoutX(110); over.setLayoutY(30);
 
         Label skor = new Label("Skorunuz: " + scoreManager.getScore());
@@ -274,16 +293,27 @@ public class GameController_hardMode {
             scoreTable.getChildren().add(l);
         }
 
-        javafx.scene.control.Button again = new javafx.scene.control.Button("Yeniden Oyna");
-        again.setStyle("-fx-font-size: 20px; -fx-background-radius: 18; -fx-background-color: #5c73bc; -fx-text-fill: white; -fx-pref-width: 180;");
+        Button again = new Button("Yeniden Oyna");
+        again.setStyle("-fx-font-size: 20px; -fx-background-radius: 18; "
+                     + "-fx-background-color: #5c73bc; -fx-text-fill: white; -fx-pref-width: 180;");
         again.setLayoutX(110); again.setLayoutY(310);
-
         again.setOnAction(ev -> {
             root.getChildren().remove(panel);
             resetGame();
         });
 
-        panel.getChildren().addAll(over, skor, tableLabel, scoreTable, again);
+        Button toMenu = new Button("Ana Menü");
+        toMenu.setStyle("-fx-font-size: 20px; -fx-background-radius: 18; "
+                      + "-fx-background-color: #ff8a65; -fx-text-fill: white; -fx-pref-width: 180;");
+        toMenu.setLayoutX(110); toMenu.setLayoutY(250);
+        toMenu.setOnAction(ev -> {
+            root.getChildren().remove(panel);
+            MainMenu mainMenu = new MainMenu(stage, dbUrl, dbUser, dbPass);
+            mainMenu.showMainMenu();
+        });
+
+        // Burada şimdi hem yeniden oyna hem ana menü butonunu ekliyoruz:
+        panel.getChildren().addAll(over, skor, tableLabel, scoreTable, toMenu, again);
         root.getChildren().add(panel);
     }
 
