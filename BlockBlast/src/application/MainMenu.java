@@ -71,7 +71,7 @@ public class MainMenu {
             Scene scene = new Scene(root, 800, 600);
             stage.setScene(scene);
             stage.setMaximized(true);
-            stage.setTitle("BlockBlast - Ana Menü");
+            stage.setTitle("Blastrix");
             stage.show();
         }
     

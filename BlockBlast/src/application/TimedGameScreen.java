@@ -43,7 +43,7 @@ public abstract class TimedGameScreen {
         // 4) Tek sahne ataması burada
         Scene scene = new Scene(root);
         stage.setScene(scene);
-        stage.setTitle("Block Blast — Zamana Karşı");
+        stage.setTitle("Blastrix");
         stage.show();
 
         // 5) Sayaç başlasın

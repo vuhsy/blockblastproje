@@ -146,7 +146,7 @@ public class GameController_hardMode {
 
         Scene scene = new Scene(root);
         stage.setScene(scene);
-        stage.setTitle("Block Blast");
+        stage.setTitle("Blastrix");
         stage.show();
     }
 

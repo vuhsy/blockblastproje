@@ -393,9 +393,9 @@ import javafx.application.Application;
 import javafx.stage.Stage;
 
 public class Main extends Application {
-    public static final String DB_URL  = "jdbc:mysql://localhost:3306/blockblast?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC";
+    public static final String DB_URL  = "jdbc:mysql://localhost:3306/mydb?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC";
     public static final String DB_USER = "root";
-    public static final String DB_PASS = "Ceng106Proje";
+    public static final String DB_PASS = "Emre13901390.";
 
     @Override
     public void start(Stage primaryStage) {

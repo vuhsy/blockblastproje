@@ -167,7 +167,7 @@ public class GameController_easyMode {
         if (setScene) {
             Scene scene = new Scene(root);
             stage.setScene(scene);
-            stage.setTitle("Block Blast");
+            stage.setTitle("Blastrix");
             stage.show();
         }
     }
